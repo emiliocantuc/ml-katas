@@ -16,7 +16,7 @@ def init_db():
         # Create katas table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS katas (
-                id TEXT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 author_id INTEGER,
@@ -25,6 +25,7 @@ def init_db():
                 completions INTEGER DEFAULT 0,
                 difficulty TEXT,
                 completion_time TEXT,
+                topics_text TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (author_id) REFERENCES users (id)
             )
@@ -39,7 +40,7 @@ def init_db():
         # Create kata_topics junction table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS kata_topics (
-                kata_id TEXT,
+                kata_id INTEGER,
                 topic_id INTEGER,
                 PRIMARY KEY (kata_id, topic_id),
                 FOREIGN KEY (kata_id) REFERENCES katas (id),
@@ -51,7 +52,7 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS user_kata_actions (
                 user_id INTEGER,
-                kata_id TEXT,
+                kata_id INTEGER,
                 action_type TEXT NOT NULL,
                 PRIMARY KEY (user_id, kata_id, action_type),
                 FOREIGN KEY (user_id) REFERENCES users (id),
@@ -60,11 +61,30 @@ def init_db():
         '''
         )
         # Create FTS5 table for katas
+        cursor.execute('DROP TABLE IF EXISTS katas_fts;')
         cursor.execute('''
-            CREATE VIRTUAL TABLE IF NOT EXISTS katas_fts USING fts5(title, content, topics_text, content='katas', content_rowid='id');
+            CREATE VIRTUAL TABLE IF NOT EXISTS katas_fts USING fts5(title, content, topics_text);
         '''
         )
-        conn.commit()
+        # Triggers to keep FTS table in sync with katas table
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS katas_after_insert AFTER INSERT ON katas
+            BEGIN
+                INSERT INTO katas_fts (rowid, title, content, topics_text) VALUES (new.id, new.title, new.content, new.topics_text);
+            END;
+        ''')
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS katas_after_delete AFTER DELETE ON katas
+            BEGIN
+                DELETE FROM katas_fts WHERE rowid = old.id;
+            END;
+        ''')
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS katas_after_update AFTER UPDATE ON katas
+            BEGIN
+                UPDATE katas_fts SET title = new.title, content = new.content, topics_text = new.topics_text WHERE rowid = new.id;
+            END;
+        ''')
 
 def get_db():
     conn = sqlite3.connect(DATABASE)

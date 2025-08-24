@@ -72,7 +72,7 @@ def get_current_user():
 def get_kata_by_id(kata_id, user_id=None):
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN users u ON k.author_id = u.id WHERE k.id = ?", (kata_id,))
+    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN users u ON k.author_id = u.id WHERE k.id = ?", (int(kata_id),))
     kata = cursor.fetchone()
     if kata:
         # Fetch topics for the kata
@@ -92,6 +92,26 @@ def get_kata_by_id(kata_id, user_id=None):
 
         return kata_dict
     return None
+
+@app.route('/autocomplete')
+def autocomplete():
+    query = request.args.get('query', '')
+    if not query:
+        return jsonify([])
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # Search for titles
+    cursor.execute("SELECT id, title FROM katas WHERE title LIKE ? LIMIT 7", ('%' + query + '%',))
+    titles = [{'id': row['id'], 'title': row['title']} for row in cursor.fetchall()]
+
+    # Search for topics
+    cursor.execute("SELECT name FROM topics WHERE name LIKE ? LIMIT 5", ('%' + query + '%',))
+    topics = [row['name'] for row in cursor.fetchall()]
+
+    return jsonify({'titles': titles, 'topics': topics})
+
 
 @app.route('/')
 def index():
@@ -161,6 +181,9 @@ def index():
     count_query = query.replace("SELECT k.*, u.display_name as author_display_name", "SELECT COUNT(k.id)")
     cursor.execute(count_query, params)
     total_katas = cursor.fetchone()[0]
+
+    print(f"Query: {query}")
+    print(f"Params: {params}")
 
     query += " LIMIT ? OFFSET ?"
     params.extend([KATAS_PER_PAGE, (page - 1) * KATAS_PER_PAGE])
@@ -288,27 +311,16 @@ def submit_kata():
                 flash(error, 'error')
             return redirect(url_for('submit_kata'))
 
-        kata_id = str(uuid.uuid4())
-        author_id = user['id']
-
-        db = get_db()
-        cursor = db.cursor()
-
-        cursor.execute("INSERT INTO katas (id, title, content, author_id, difficulty, completion_time) VALUES (?, ?, ?, ?, ?, ?)",
-                       (kata_id, title, content, author_id, difficulty, completion_time))
+        cursor.execute("INSERT INTO katas (title, content, author_id, difficulty, completion_time, topics_text) VALUES (?, ?, ?, ?, ?, ?)",
+                       (title, content, author_id, difficulty, completion_time, topics_text))
+        kata_id = cursor.lastrowid
         
         # Insert topics and link to kata
-        topics_text_for_fts = []
         for topic_name in topics:
             cursor.execute("INSERT OR IGNORE INTO topics (name) VALUES (?) ", (topic_name,))
             cursor.execute("SELECT id FROM topics WHERE name = ?", (topic_name,))
             topic_id = cursor.fetchone()[0]
             cursor.execute("INSERT INTO kata_topics (kata_id, topic_id) VALUES (?, ?)", (kata_id, topic_id))
-            topics_text_for_fts.append(topic_name)
-        
-        # Insert into FTS table (removed rowid)
-        cursor.execute("INSERT INTO katas_fts (title, content, topics_text) VALUES (?, ?, ?)",
-                       (title, content, " ".join(topics_text_for_fts)))
 
         db.commit()
         flash('Kata submitted successfully!', 'success')
@@ -325,7 +337,7 @@ def preview():
     html_content = markdown2.markdown(content, extras=["fenced-code-blocks", "latex"])
     return html_content
 
-@app.route('/kata/<kata_id>')
+@app.route('/kata/<int:kata_id>')
 def view_kata(kata_id):
     user = get_current_user()
     user_id = user['id'] if user else None
@@ -339,7 +351,7 @@ def view_kata(kata_id):
         return render_template('view_kata.html', kata=kata, user=user)
     return 'Kata not found', 404
 
-@app.route('/kata/<kata_id>/upvote', methods=['POST'])
+@app.route('/kata/<int:kata_id>/upvote', methods=['POST'])
 def upvote_kata(kata_id):
     user = get_current_user()
     if not user:
@@ -371,7 +383,7 @@ def upvote_kata(kata_id):
         return redirect(url_for('completed_katas'))
     return redirect(url_for('view_kata', kata_id=kata_id))
 
-@app.route('/kata/<kata_id>/save', methods=['POST'])
+@app.route('/kata/<int:kata_id>/save', methods=['POST'])
 def save_kata(kata_id):
     user = get_current_user()
     if not user:
@@ -403,7 +415,7 @@ def save_kata(kata_id):
         return redirect(url_for('completed_katas'))
     return redirect(url_for('view_kata', kata_id=kata_id))
 
-@app.route('/kata/<kata_id>/complete', methods=['POST'])
+@app.route('/kata/<int:kata_id>/complete', methods=['POST'])
 def complete_kata(kata_id):
     user = get_current_user()
     if not user:
@@ -532,23 +544,19 @@ def bulk_upload_katas():
             topics = kata_data.get('topics')
             difficulty = kata_data.get('difficulty')
             completion_time = kata_data.get('completion_time')
+            topics_text = " ".join(topics)
 
-            kata_id = str(uuid.uuid4())
             author_id = user['id']
 
-            cursor.execute("INSERT INTO katas (id, title, content, author_id, difficulty, completion_time) VALUES (?, ?, ?, ?, ?, ?)",
-                           (kata_id, title, content, author_id, difficulty, completion_time))
+            cursor.execute("INSERT INTO katas (title, content, author_id, difficulty, completion_time, topics_text) VALUES (?, ?, ?, ?, ?, ?)",
+                           (title, content, author_id, difficulty, completion_time, topics_text))
+            kata_id = cursor.lastrowid
             
-            topics_text_for_fts = []
             for topic_name in topics:
                 cursor.execute("INSERT OR IGNORE INTO topics (name) VALUES (?) ", (topic_name,))
                 cursor.execute("SELECT id FROM topics WHERE name = ?", (topic_name,))
                 topic_id = cursor.fetchone()[0]
                 cursor.execute("INSERT INTO kata_topics (kata_id, topic_id) VALUES (?, ?)", (kata_id, topic_id))
-                topics_text_for_fts.append(topic_name)
-            
-            cursor.execute("INSERT INTO katas_fts (title, content, topics_text) VALUES (?, ?, ?)",
-                           (title, content, " ".join(topics_text_for_fts)))
 
             uploaded_count += 1
         except Exception as e:
