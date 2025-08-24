@@ -18,7 +18,7 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 
-KATAS_PER_PAGE = 20
+KATAS_PER_PAGE = 25
 ALLOWED_COMPLETION_TIMES = ['<10 mins', '<30 mins', '<1 hr', '>1 hr']
 ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard']
 
