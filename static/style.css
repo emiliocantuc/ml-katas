@@ -45,13 +45,18 @@ nav a {
     font-size: 0.8em;
     color: #666;
     margin-bottom: 5px;
+    line-height: 1.4em; /* Adjust line height for better spacing */
 }
 
 .topic {
-    background-color: #ddd;
-    padding: 2px 5px;
-    border-radius: 3px;
-    margin-right: 5px;
+    /* Removed pill styling */
+    /* margin-right: 5px;
+    display: inline-block;
+    vertical-align: middle; */
+}
+
+.kata-item .meta .topic {
+    font-size: 0.9em; /* Slightly larger for better readability in meta */
 }
 
 .pagination {
@@ -128,6 +133,15 @@ nav a {
 
 .search-container {
     position: relative;
+}
+
+#search-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.1em;
+    border: 1px solid #333;
+    /* border-radius: 5px; */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 
 .autocomplete-wrapper {

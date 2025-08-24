@@ -8,7 +8,7 @@
         <br>
         <div class="search-container">
             <form action="{{ url_for('index') }}" method="get" class="search-form">
-                <input type="text" id="search-input" name="search" placeholder="Search katas..." value="{{ search_query if search_query else '' }}" autocomplete="off">
+                <input type="text" id="search-input" name="search" placeholder="Search katas ..." value="{{ search_query if search_query else '' }}" autocomplete="off">
             </form>
         </div>
         <br>
@@ -33,6 +33,7 @@
                     {% endif %}
                     <a href="{{ url_for('index', difficulty=kata.difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">{{ kata.difficulty }}</a>
                     (<a href="{{ url_for('index', difficulty=current_difficulty, completion_time=kata.completion_time, topic=current_topic, search=search_query) }}">{{ kata.completion_time }}</a>)
+                |
                     {% for topic in kata.topics %}
                         <a href="{{ url_for('index', difficulty=current_difficulty, completion_time=current_completion_time, topic=topic, search=search_query) }}"><span class="topic">{{ topic }}</span></a>
                     {% endfor %}
