@@ -356,11 +356,9 @@ def upvote_kata(kata_id):
     if already_upvoted:
         cursor.execute("DELETE FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'upvote'", (user['id'], kata_id))
         cursor.execute("UPDATE katas SET upvotes = upvotes - 1 WHERE id = ?", (kata_id,))
-        flash('Upvote removed.', 'info')
     else:
         cursor.execute("INSERT INTO user_kata_actions (user_id, kata_id, action_type) VALUES (?, ?, ?)", (user['id'], kata_id, 'upvote'))
         cursor.execute("UPDATE katas SET upvotes = upvotes + 1 WHERE id = ?", (kata_id,))
-        flash('Kata upvoted successfully!', 'success')
     db.commit()
     
     source = request.form.get('source')
@@ -390,11 +388,9 @@ def save_kata(kata_id):
     if already_saved:
         cursor.execute("DELETE FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'save'", (user['id'], kata_id))
         cursor.execute("UPDATE katas SET saves = saves - 1 WHERE id = ?", (kata_id,))
-        flash('Kata unsaved.', 'info')
     else:
         cursor.execute("INSERT INTO user_kata_actions (user_id, kata_id, action_type) VALUES (?, ?, ?)", (user['id'], kata_id, 'save'))
         cursor.execute("UPDATE katas SET saves = saves + 1 WHERE id = ?", (kata_id,))
-        flash('Kata saved successfully!', 'success')
     db.commit()
 
     source = request.form.get('source')
@@ -424,11 +420,9 @@ def complete_kata(kata_id):
     if already_completed:
         cursor.execute("DELETE FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'complete'", (user['id'], kata_id))
         cursor.execute("UPDATE katas SET completions = completions - 1 WHERE id = ?", (kata_id,))
-        flash('Kata unmarked as complete.', 'info')
     else:
         cursor.execute("INSERT INTO user_kata_actions (user_id, kata_id, action_type) VALUES (?, ?, ?)", (user['id'], kata_id, 'complete'))
         cursor.execute("UPDATE katas SET completions = completions + 1 WHERE id = ?", (kata_id,))
-        flash('Kata marked as complete!', 'success')
     db.commit()
 
     source = request.form.get('source')
