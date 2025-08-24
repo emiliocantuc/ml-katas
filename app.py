@@ -23,8 +23,10 @@ ALLOWED_COMPLETION_TIMES = ['<10 mins', '<30 mins', '<1 hr', '>1 hr']
 ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard']
 
 
+import os # Added import
+
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'
+app.secret_key = os.environ.get('SECRET_KEY', 'supersecretkey') # Load from .env or use default
 
 @app.template_filter('humanize_time')
 def humanize_time(dt):
@@ -731,4 +733,6 @@ def compile_prompt():
     return jsonify({'success': True, 'compiled_content': compiled_content})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    print(port)
+    app.run(debug=True, port=port)
