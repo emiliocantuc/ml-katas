@@ -18,6 +18,9 @@ import sqlite3
 import json
 
 KATAS_PER_PAGE = 20
+ALLOWED_COMPLETION_TIMES = ['<10 mins', '<30 mins', '<1 hr', '>1 hr']
+ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard']
+
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -191,6 +194,37 @@ def submit_kata():
         topics = [t.strip() for t in topics_str.split(',') if t.strip()]
         difficulty = request.form['difficulty']
         completion_time = request.form['completion_time']
+
+        # Validation
+        if not title or not title.strip():
+            flash('Title is required.', 'error')
+            return redirect(url_for('submit_kata'))
+        if not content or not content.strip():
+            flash('Content is required.', 'error')
+            return redirect(url_for('submit_kata'))
+        if len(title) > 100:
+            flash('Title cannot be longer than 100 characters.', 'error')
+            return redirect(url_for('submit_kata'))
+        if len(content) > 10000:
+            flash('Content cannot be longer than 10000 characters.', 'error')
+            return redirect(url_for('submit_kata'))
+        if difficulty not in ALLOWED_DIFFICULTIES:
+            flash('Invalid difficulty.', 'error')
+            return redirect(url_for('submit_kata'))
+
+        if completion_time not in ALLOWED_COMPLETION_TIMES:
+            flash('Invalid completion time.', 'error')
+            return redirect(url_for('submit_kata'))
+
+        if len(topics) > 5:
+            flash('You can only add up to 5 topics.', 'error')
+            return redirect(url_for('submit_kata'))
+
+        for topic in topics:
+            if len(topic) > 20:
+                flash('Each topic must be 20 characters or less.', 'error')
+                return redirect(url_for('submit_kata'))
+
         kata_id = str(uuid.uuid4())
         author_id = user['id']
 
@@ -216,7 +250,7 @@ def submit_kata():
         db.commit()
         flash('Kata submitted successfully!', 'success')
         return redirect(url_for('view_kata', kata_id=kata_id))
-    return render_template('submit.html', user=user)
+    return render_template('submit.html', user=user, allowed_completion_times=ALLOWED_COMPLETION_TIMES, allowed_difficulties=ALLOWED_DIFFICULTIES)
 
 @app.route('/preview', methods=['POST'])
 def preview():
@@ -455,8 +489,34 @@ def bulk_upload_katas():
             difficulty = kata_data.get('difficulty', 'medium')
             completion_time = kata_data.get('completion_time', '>1hr')
 
-            if not all([title, content]):
+            # Validation
+            if difficulty not in ALLOWED_DIFFICULTIES:
+                errors.append(f"Invalid difficulty for kata: {title}")
+                continue
+
+            if completion_time not in ALLOWED_COMPLETION_TIMES:
+                errors.append(f"Invalid completion time for kata: {title}")
+                continue
+
+            if len(topics) > 5:
+                errors.append(f"Too many topics for kata: {title}")
+                continue
+
+            for topic in topics:
+                if len(topic) > 20:
+                    errors.append(f"Invalid topic length for kata: {title}")
+                    continue
+
+            if not all([title, title.strip(), content, content.strip()]):
                 errors.append(f"Skipping kata due to missing title or content: {kata_data.get('title', 'N/A')}")
+                continue
+
+            if len(title) > 100:
+                errors.append(f"Title for kata '{title}' is too long (max 100 chars).")
+                continue
+
+            if len(content) > 10000:
+                errors.append(f"Content for kata '{title}' is too long (max 10000 chars).")
                 continue
 
             kata_id = str(uuid.uuid4())

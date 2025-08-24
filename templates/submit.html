@@ -28,19 +28,18 @@
         <div class="form-section">
             <label for="difficulty">Difficulty</label>
             <select id="difficulty" name="difficulty">
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                {% for difficulty in allowed_difficulties %}
+                <option value="{{ difficulty }}">{{ difficulty }}</option>
+                {% endfor %}
             </select>
         </div>
 
         <div class="form-section">
             <label for="completion_time">Expected Completion Time</label>
             <select id="completion_time" name="completion_time">
-                <option value="<10 mins"><10 mins</option>
-                <option value="<30 mins"><30 mins</option>
-                <option value="<1hr"><1hr</option>
-                <option value=">1hr">>1hr</option>
+                {% for time in allowed_completion_times %}
+                <option value="{{ time }}">{{ time }}</option>
+                {% endfor %}
             </select>
         </div>
 
