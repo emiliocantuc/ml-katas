@@ -122,6 +122,7 @@ def index():
 
     search_query = request.args.get('search')
     created_at_filter = request.args.get('created_at')
+    sort_by = request.args.get('sort_by', 'created_at') # Default sort by creation date
 
     if created_at_filter:
         now = datetime.now()
@@ -148,6 +149,13 @@ def index():
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
+
+    if sort_by == 'upvotes':
+        query += " ORDER BY k.upvotes DESC"
+    elif sort_by == 'saves':
+        query += " ORDER BY k.saves DESC"
+    else:
+        query += " ORDER BY k.created_at DESC"
     
     # Get total count for pagination
     count_query = query.replace("SELECT k.*, u.display_name as author_display_name", "SELECT COUNT(k.id)")
@@ -191,6 +199,7 @@ def index():
                            current_completion_time=completion_time_filter,
                            current_topic=topic_filter,
                            current_created_at=created_at_filter,
+                           sort_by=sort_by,
                            search_query=search_query)
 
 @app.route('/login', methods=['GET', 'POST'])

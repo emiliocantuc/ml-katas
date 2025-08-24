@@ -10,6 +10,13 @@
             <input type="text" name="search" placeholder="Search katas..." value="{{ search_query if search_query else '' }}">
             <button type="submit">Search</button>
         </form>
+        <br>
+        <div class="sort-options">
+            <span>by:</span>
+            <a href="{{ url_for('index', sort_by='created_at', difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query, created_at=current_created_at) }}" class="{% if sort_by == 'created_at' %}active{% endif %}">newest</a>
+            <a href="{{ url_for('index', sort_by='upvotes', difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query, created_at=current_created_at) }}" class="{% if sort_by == 'upvotes' %}active{% endif %}">upvotes</a>
+            <a href="{{ url_for('index', sort_by='saves', difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query, created_at=current_created_at) }}" class="{% if sort_by == 'saves' %}active{% endif %}">saves</a>
+        </div>
         <ul class="kata-list">
             {% for kata in katas %}
             <li class="kata-item">
@@ -51,19 +58,19 @@
 
         <div class="pagination">
             {% if page > 1 %}
-                <a href="{{ url_for('index', page=page-1, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">&laquo; Previous</a>
+                <a href="{{ url_for('index', page=page-1, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query, created_at=current_created_at, sort_by=sort_by) }}">&laquo; Previous</a>
             {% endif %}
 
             {% for p in range(1, total_pages + 1) %}
                 {% if p == page %}
                     <span class="current">{{ p }}</span>
                 {% else %}
-                    <a href="{{ url_for('index', page=p, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">{{ p }}</a>
+                    <a href="{{ url_for('index', page=p, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query, created_at=current_created_at, sort_by=sort_by) }}">{{ p }}</a>
                 {% endif %}
             {% endfor %}
 
             {% if page < total_pages %}
-                <a href="{{ url_for('index', page=page+1, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">Next &raquo;</a>
+                <a href="{{ url_for('index', page=page+1, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query, created_at=current_created_at, sort_by=sort_by) }}">Next &raquo;</a>
             {% endif %}
         </div>
     </section>
