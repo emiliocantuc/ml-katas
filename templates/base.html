@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ML Katas{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <header>
         <h1><a href="{{ url_for('index') }}">ML Katas</a></h1>
@@ -13,30 +15,50 @@
             <a href="{{ url_for('submit_kata') }}">Submit</a>
             <a href="{{ url_for('prompts') }}">Prompts</a>
             {% if user %}
-                <a href="{{ url_for('saved_katas') }}">Saved</a>
-                <a href="{{ url_for('completed_katas') }}">Completed</a>
-                <a href="{{ url_for('logout') }}">Logout</a>
+            <a href="{{ url_for('saved_katas') }}">Saved</a>
+            <a href="{{ url_for('completed_katas') }}">Completed</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
             {% else %}
-                <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('login') }}">Login</a>
             {% endif %}
         </nav>
     </header>
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
+
+    <footer>
+        
+        <p>
+            {% if user %}
+            [<a href="#" onclick="copyUsernameToClipboard('{{ user.secret_username }}'); return false;">copy my username</a>]
+            {% endif %}
+            |
+            [<a href="https://github.com/emiliocantuc/ml-katas" target="_blank">code</a>]
+        </p>
+    </footer>
+
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="{{ url_for('static', filename='autocomplete.js') }}"></script>
-    <footer>
-        <p>[<a href="https://github.com/emiliocantuc/ml-katas" target="_blank">code</a>]</p>
-    </footer>
+    <script>
+        function copyUsernameToClipboard(username) {
+            navigator.clipboard.writeText(username).then(() => {
+                alert('Username copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy username: ', err);
+                alert('Failed to copy username.');
+            });
+        }
+    </script>
 </body>
+
 </html>
