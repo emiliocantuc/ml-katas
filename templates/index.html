@@ -5,7 +5,7 @@
 
 {% block content %}
     <section>
-        <h2>All Katas</h2>
+        <br>
         <form action="{{ url_for('index') }}" method="get" class="search-form">
             <input type="text" name="search" placeholder="Search katas..." value="{{ search_query if search_query else '' }}">
             <button type="submit">Search</button>
