@@ -667,6 +667,15 @@ def compile_prompt():
     # Replace [[ allowed_times ]]
     compiled_content = compiled_content.replace('[[ allowed_times ]]', ', '.join(ALLOWED_COMPLETION_TIMES))
 
+    SCHEMA_DETAILS_DESCRIPTION = """The kata upload schema expects a JSON array of objects, where each object represents a kata. Each kata object should have the following fields:
+
+- **title** (string): The title of the kata. Must be between 1 and 100 characters.
+- **content** (string): The main content of the kata, supporting Markdown. Must be between 1 and 10000 characters.
+- **topics** (string): A comma-separated string of topics related to the kata. You can add up to 5 topics, and each topic must be 20 characters or less.
+- **difficulty** (string): The difficulty level of the kata. Allowed values are: easy, medium, hard.
+- **completion_time** (string): The estimated completion time for the kata. Allowed values are: <10 mins, <30 mins, <1 hr, >1 hr."""
+    compiled_content = compiled_content.replace('[[ schema_details ]]', SCHEMA_DETAILS_DESCRIPTION)
+
     # Helper to fetch kata details for JSON output
     def fetch_kata_details(kata_id):
         kata_cursor = db.cursor()

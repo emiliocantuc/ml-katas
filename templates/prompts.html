@@ -28,6 +28,7 @@
                         <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_10_last_upvoted ]]">[[ your_10_last_upvoted ]]</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_10_last_saved ]]">[[ your_10_last_saved ]]</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_last_completed ]]">[[ your_last_completed ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ schema_details ]]">[[ schema_details ]]</button>
                     </div>
                 </div>
 
@@ -175,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Compile Data:', compileData); // Add this line for debugging
                     console.log('Compiled Content:', compileData.compiled_content); // Add this line for debugging
                     compiledOutput.value = compileData.compiled_content;
-                    compiledOutput.scrollIntoView({ behavior: 'smooth' }); // Scroll to output
+                    compiledOutput.scrollIntoView(); // Scroll to output (default behavior: 'auto')
                 } else {
                     alert('Error compiling prompt: ' + compileData.message);
                 }

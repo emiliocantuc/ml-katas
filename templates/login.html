@@ -5,20 +5,15 @@
 {% block content %}
     <h2>Login or Register</h2>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+    
 
     <form method="post">
         <p>If you have a secret username, enter it here to log in.</p>
         <label for="secret_username">Secret Username</label>
-        <input type="text" id="secret_username" name="secret_username" required autofocus>
+        <div style="display: flex; align-items: center;">
+            <input type="text" id="secret_username" name="secret_username" required autofocus style="flex-grow: 1; margin-right: 10px;">
+            <button type="button" id="generateUsernameBtn" class="btn btn-secondary btn-sm">Generate</button>
+        </div>
         
         <p>If you are new, enter a display name and a desired secret username to register.</p>
         <label for="display_name">Display Name</label>
@@ -26,4 +21,22 @@
 
         <button type="submit">Login / Register</button>
     </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const generateUsernameBtn = document.getElementById('generateUsernameBtn');
+            const secretUsernameInput = document.getElementById('secret_username');
+
+            generateUsernameBtn.addEventListener('click', function() {
+                // Generate a random UUID (Universally Unique Identifier)
+                // This is a common way to get a reasonably unique string
+                const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0,
+                        v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+                secretUsernameInput.value = 'user-' + uuid.substring(0, 8); // Prepend 'user-' and shorten for readability
+            });
+        });
+    </script>
 {% endblock %}
