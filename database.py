@@ -26,7 +26,7 @@ def init_db():
                 difficulty TEXT,
                 completion_time TEXT,
                 topics_text TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Added NOT NULL
                 FOREIGN KEY (author_id) REFERENCES users (id)
             )
         ''')
@@ -54,9 +54,10 @@ def init_db():
                 user_id INTEGER,
                 kata_id INTEGER,
                 action_type TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, kata_id, action_type),
                 FOREIGN KEY (user_id) REFERENCES users (id),
-                                FOREIGN KEY (kata_id) REFERENCES katas (id)
+                FOREIGN KEY (kata_id) REFERENCES katas (id)
             )
         ''')
         

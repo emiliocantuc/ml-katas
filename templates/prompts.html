@@ -60,10 +60,9 @@
         </div>
     </div>
     <br>
-    <hr>
-    <h2>Compiled Output</h2>
+    Compiled Output
     <button type="button" class="btn btn-secondary mb-3" id="copyOutputButton">Copy to Clipboard</button>
-    <div class="card mb-4 mt-4">
+    <div class="card mb-1 mt-1">
         <div class="card-body">
             <div class="form-section">
                 <textarea id="compiledOutput" name="compiled_output" rows="20" readonly></textarea>
@@ -110,7 +109,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         const data = await response.json();
         if (data.success) {
-            alert(data.message);
+            // No success alert
+            promptIdInput.value = data.prompt_id; // Update hidden promptId
             location.reload(); // Reload to show updated list
         } else {
             alert('Error: ' + data.message);

@@ -606,20 +606,30 @@ def save_prompt():
     db = get_db()
     cursor = db.cursor()
 
-    if prompt_id:
-        # Update existing prompt
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if a prompt with this name already exists for the current user
+    existing_prompt_id = None
+    if not prompt_id: # Only check by name if no prompt_id is provided (i.e., it's a new save)
+        cursor.execute("SELECT id FROM prompts WHERE user_id = ? AND name = ?", (user['id'], prompt_name))
+        existing_prompt = cursor.fetchone()
+        if existing_prompt:
+            existing_prompt_id = existing_prompt['id']
+
+    if prompt_id or existing_prompt_id:
+        # Use provided prompt_id or found existing_prompt_id for update
+        id_to_update = prompt_id if prompt_id else existing_prompt_id
         cursor.execute("UPDATE prompts SET name = ?, content = ? WHERE id = ? AND user_id = ?",
-                       (prompt_name, prompt_content, prompt_id, user['id']))
-        message = 'Prompt updated successfully!'
+                       (prompt_name, prompt_content, id_to_update, user['id']))
     else:
         # Insert new prompt
         cursor.execute("INSERT INTO prompts (user_id, name, content) VALUES (?, ?, ?)",
                        (user['id'], prompt_name, prompt_content))
-        prompt_id = cursor.lastrowid
-        message = 'Prompt saved successfully!'
+        prompt_id = cursor.lastrowid # Get the ID of the newly inserted prompt
     
     db.commit()
-    return jsonify({'success': True, 'message': message, 'prompt_id': prompt_id})
+    return jsonify({'success': True, 'prompt_id': prompt_id if prompt_id else existing_prompt_id}) # Return the ID of the updated/new prompt
 
 @app.route('/get_prompt/<int:prompt_id>', methods=['GET'])
 def get_prompt(prompt_id):

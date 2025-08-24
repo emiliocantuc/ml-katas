@@ -212,3 +212,16 @@ footer {
     color: #666;
     font-size: 0.9em;
 }
+
+/* Custom Margin Utilities (similar to Bootstrap's spacing system) */
+.mb-1 { margin-bottom: 8px !important; }
+.mb-2 { margin-bottom: 16px !important; }
+.mb-3 { margin-bottom: 24px !important; }
+.mb-4 { margin-bottom: 32px !important; }
+.mb-5 { margin-bottom: 48px !important; }
+
+.mt-1 { margin-top: 8px !important; }
+.mt-2 { margin-top: 16px !important; }
+.mt-3 { margin-top: 24px !important; }
+.mt-4 { margin-top: 32px !important; }
+.mt-5 { margin-top: 48px !important; }
