@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Prompts{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Your Prompts</h1>
+    <h2>Create</h2>
+    <div class="card mb-4">
+        <!-- <div class="card-header">
+            Create/Edit
+        </div> -->
+        <div class="card-body">
+            <form id="promptForm">
+                <input type="hidden" id="promptId" name="prompt_id">
+                <div class="form-section">
+                    <label for="promptName">Name</label>
+                    <input type="text" id="promptName" name="prompt_name" required placeholder="Gemini with saved">
+                </div>
+                <div class="form-section">
+                    <label for="promptContent">Prompt Content</label>
+                    <textarea id="promptContent" name="prompt_content" rows="20" required></textarea>
+                    
+                    <div class="special-strings mt-4">
+                        Insert special strings:
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ allowed_difficulties ]]">[[ allowed_difficulties ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ allowed_times ]]">[[ allowed_times ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_10_last_upvoted ]]">[[ your_10_last_upvoted ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_10_last_saved ]]">[[ your_10_last_saved ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_last_completed ]]">[[ your_last_completed ]]</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" id="clearFormButton">Clear</button>
+            </form>
+        </div>
+    </div>
+    <br>
+    <hr>
+    <h2>Saved</h2>
+
+    <div class="card mb-4 mt-4">
+        <div class="card-body">
+            {% if user_prompts %}
+            <ul class="list-group">
+                {% for prompt in user_prompts %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ prompt.name }}
+                    <a href="#" class="edit-prompt-btn ms-auto me-2" data-id="{{ prompt.id }}">Edit</a>
+                    <a href="#" class="delete-prompt-btn me-2" data-id="{{ prompt.id }}">Delete</a>
+                    <a href="#" class="compile-prompt-btn" data-id="{{ prompt.id }}">Compile</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No prompts saved yet. Start by creating one above!</p>
+            {% endif %}
+        </div>
+    </div>
+    <br>
+    <hr>
+    <h2>Compiled Output</h2>
+    <button type="button" class="btn btn-secondary mb-3" id="copyOutputButton">Copy to Clipboard</button>
+    <div class="card mb-4 mt-4">
+        <div class="card-body">
+            <div class="form-section">
+                <textarea id="compiledOutput" name="compiled_output" rows="20" readonly></textarea>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+function insertAtCursor(field, text) {
+    const cursorPosition = field.selectionStart;
+    const originalContent = field.value;
+    field.value = originalContent.substring(0, cursorPosition) + text + originalContent.substring(field.selectionEnd);
+    field.selectionStart = cursorPosition + text.length;
+    field.selectionEnd = cursorPosition + text.length;
+    field.focus();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const promptForm = document.getElementById('promptForm');
+    const promptIdInput = document.getElementById('promptId');
+    const promptNameInput = document.getElementById('promptName');
+    const promptContentInput = document.getElementById('promptContent');
+    const clearFormButton = document.getElementById('clearFormButton');
+    const compiledOutput = document.getElementById('compiledOutput');
+    const copyOutputButton = document.getElementById('copyOutputButton');
+
+    // Handle inserting special strings
+    document.querySelectorAll('.insert-string-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const stringToInsert = this.dataset.string;
+            insertAtCursor(promptContentInput, stringToInsert);
+        });
+    });
+
+    // Handle Save/Update Prompt
+    promptForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const formData = new FormData(promptForm);
+        const response = await fetch('/save_prompt', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert(data.message);
+            location.reload(); // Reload to show updated list
+        } else {
+            alert('Error: ' + data.message);
+        }
+    });
+
+    // Handle Edit Prompt
+    document.querySelectorAll('.edit-prompt-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const promptId = this.dataset.id;
+            const response = await fetch(`/get_prompt/${promptId}`);
+            const data = await response.json();
+            if (data.success) {
+                promptIdInput.value = data.prompt.id;
+                promptNameInput.value = data.prompt.name;
+                promptContentInput.value = data.prompt.content;
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
+    });
+
+    // Handle Delete Prompt
+    document.querySelectorAll('.delete-prompt-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            if (confirm('Are you sure you want to delete this prompt?')) {
+                const promptId = this.dataset.id;
+                const formData = new FormData();
+                formData.append('prompt_id', promptId);
+                const response = await fetch(`/delete_prompt/${promptId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    location.reload(); // No success alert, just reload
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            }
+        });
+    });
+
+    // Handle Compile Prompt
+    document.querySelectorAll('.compile-prompt-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const promptId = this.dataset.id;
+            const getResponse = await fetch(`/get_prompt/${promptId}`);
+            const getData = await getResponse.json();
+
+            if (getData.success) {
+                const promptContent = getData.prompt.content;
+                const formData = new FormData();
+                formData.append('prompt_content', promptContent);
+
+                const compileResponse = await fetch('/compile_prompt', {
+                    method: 'POST',
+                    body: formData
+                });
+                const compileData = await compileResponse.json();
+
+                if (compileData.success) {
+                    console.log('Compile Data:', compileData); // Add this line for debugging
+                    console.log('Compiled Content:', compileData.compiled_content); // Add this line for debugging
+                    compiledOutput.value = compileData.compiled_content;
+                    compiledOutput.scrollIntoView({ behavior: 'smooth' }); // Scroll to output
+                } else {
+                    alert('Error compiling prompt: ' + compileData.message);
+                }
+            } else {
+                alert('Error fetching prompt for compilation: ' + getData.message);
+            }
+        });
+    });
+
+    // Clear Form
+    clearFormButton.addEventListener('click', function() {
+        promptIdInput.value = '';
+        promptNameInput.value = '';
+        promptContentInput.value = '';
+    });
+
+    // Copy to Clipboard
+    copyOutputButton.addEventListener('click', function() {
+        compiledOutput.select();
+        document.execCommand('copy');
+        alert('Compiled output copied to clipboard!');
+    });
+});
+</script>
+{% endblock %}

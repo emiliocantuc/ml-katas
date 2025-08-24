@@ -56,10 +56,21 @@ def init_db():
                 action_type TEXT NOT NULL,
                 PRIMARY KEY (user_id, kata_id, action_type),
                 FOREIGN KEY (user_id) REFERENCES users (id),
-                FOREIGN KEY (kata_id) REFERENCES katas (id)
+                                FOREIGN KEY (kata_id) REFERENCES katas (id)
             )
-        '''
-        )
+        ''')
+        
+        # Create prompts table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS prompts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
         # Create FTS5 table for katas
         cursor.execute('DROP TABLE IF EXISTS katas_fts;')
         cursor.execute('''

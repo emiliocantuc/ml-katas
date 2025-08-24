@@ -11,6 +11,7 @@
         <h1><a href="{{ url_for('index') }}">ML Katas</a></h1>
         <nav>
             <a href="{{ url_for('submit_kata') }}">Submit</a>
+            <a href="{{ url_for('prompts') }}">Prompts</a>
             {% if user %}
                 <a href="{{ url_for('saved_katas') }}">Saved</a>
                 <a href="{{ url_for('completed_katas') }}">Completed</a>

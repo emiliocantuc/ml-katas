@@ -113,9 +113,16 @@ nav a {
 }
 
 #content,
-#json_data {
+#json_data,
+#promptContent, /* Added #promptContent */
+#compiledOutput { /* Added #compiledOutput */
     width: 100%;
     min-height: 200px;
+    display: block;
+}
+
+#promptName { /* New rule for promptName */
+    width: 100%;
     display: block;
 }
 

@@ -574,5 +574,152 @@ def bulk_upload_katas():
 
     return redirect(url_for('index'))
 
+@app.route('/prompts')
+def prompts():
+    user = get_current_user()
+    if not user:
+        flash('Please log in to manage your prompts.', 'error')
+        return redirect(url_for('login'))
+    
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, name FROM prompts WHERE user_id = ?", (user['id'],))
+    user_prompts = cursor.fetchall()
+
+    return render_template('prompts.html', user=user, user_prompts=user_prompts)
+
+@app.route('/save_prompt', methods=['POST'])
+def save_prompt():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    prompt_id = request.form.get('prompt_id')
+    prompt_name = request.form.get('prompt_name')
+    prompt_content = request.form.get('prompt_content')
+
+    if not prompt_name or not prompt_content:
+        return jsonify({'success': False, 'message': 'Prompt name and content are required.'}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+
+    if prompt_id:
+        # Update existing prompt
+        cursor.execute("UPDATE prompts SET name = ?, content = ? WHERE id = ? AND user_id = ?",
+                       (prompt_name, prompt_content, prompt_id, user['id']))
+        message = 'Prompt updated successfully!'
+    else:
+        # Insert new prompt
+        cursor.execute("INSERT INTO prompts (user_id, name, content) VALUES (?, ?, ?)",
+                       (user['id'], prompt_name, prompt_content))
+        prompt_id = cursor.lastrowid
+        message = 'Prompt saved successfully!'
+    
+    db.commit()
+    return jsonify({'success': True, 'message': message, 'prompt_id': prompt_id})
+
+@app.route('/get_prompt/<int:prompt_id>', methods=['GET'])
+def get_prompt(prompt_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, name, content FROM prompts WHERE id = ? AND user_id = ?", (prompt_id, user['id']))
+    prompt = cursor.fetchone()
+
+    if prompt:
+        return jsonify({'success': True, 'prompt': dict(prompt)})
+    else:
+        return jsonify({'success': False, 'message': 'Prompt not found or unauthorized.'}), 404
+
+@app.route('/delete_prompt/<int:prompt_id>', methods=['POST'])
+def delete_prompt(prompt_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM prompts WHERE id = ? AND user_id = ?", (prompt_id, user['id']))
+    db.commit()
+
+    if cursor.rowcount > 0:
+        return jsonify({'success': True, 'message': 'Prompt deleted successfully.'})
+    else:
+        return jsonify({'success': False, 'message': 'Prompt not found or unauthorized.'}), 404
+
+@app.route('/compile_prompt', methods=['POST'])
+def compile_prompt():
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    prompt_content = request.form.get('prompt_content')
+    if not prompt_content:
+        return jsonify({'success': False, 'message': 'Prompt content is required.'}), 400
+
+    # Replace [[ allowed_difficulties ]]
+    compiled_content = prompt_content.replace('[[ allowed_difficulties ]]', ', '.join(ALLOWED_DIFFICULTIES))
+    
+    # Replace [[ allowed_times ]]
+    compiled_content = compiled_content.replace('[[ allowed_times ]]', ', '.join(ALLOWED_COMPLETION_TIMES))
+
+    # Helper to fetch kata details for JSON output
+    def fetch_kata_details(kata_id):
+        kata_cursor = db.cursor()
+        kata_cursor.execute("SELECT title, content, difficulty, completion_time FROM katas WHERE id = ?", (kata_id,))
+        kata_row = kata_cursor.fetchone()
+        if kata_row:
+            kata_dict = dict(kata_row)
+            # Fetch topics for the kata
+            kata_cursor.execute("SELECT t.name FROM topics t JOIN kata_topics kt ON t.id = kt.topic_id WHERE kt.kata_id = ?", (kata_id,))
+            topics_list = [row['name'] for row in kata_cursor.fetchall()]
+            kata_dict['topics'] = ", ".join(topics_list) # Join topics with comma and space
+            return kata_dict
+        return None
+
+    # Replace [[ your_10_last_upvoted ]]
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT k.id FROM katas k
+        JOIN user_kata_actions uka ON k.id = uka.kata_id
+        WHERE uka.user_id = ? AND uka.action_type = 'upvote'
+        ORDER BY uka.timestamp DESC
+        LIMIT 10
+    """, (user['id'],))
+    upvoted_kata_ids = [row['id'] for row in cursor.fetchall()]
+    upvoted_katas_json = json.dumps([fetch_kata_details(kata_id) for kata_id in upvoted_kata_ids if fetch_kata_details(kata_id) is not None], indent=2)
+    compiled_content = compiled_content.replace('[[ your_10_last_upvoted ]]', upvoted_katas_json)
+
+    # Replace [[ your_10_last_saved ]]
+    cursor.execute("""
+        SELECT k.id FROM katas k
+        JOIN user_kata_actions uka ON k.id = uka.kata_id
+        WHERE uka.user_id = ? AND uka.action_type = 'save'
+        ORDER BY uka.timestamp DESC
+        LIMIT 10
+    """, (user['id'],))
+    saved_kata_ids = [row['id'] for row in cursor.fetchall()]
+    saved_katas_json = json.dumps([fetch_kata_details(kata_id) for kata_id in saved_kata_ids if fetch_kata_details(kata_id) is not None], indent=2)
+    compiled_content = compiled_content.replace('[[ your_10_last_saved ]]', saved_katas_json)
+
+    # Replace [[ your_last_completed ]]
+    cursor.execute("""
+        SELECT k.id FROM katas k
+        JOIN user_kata_actions uka ON k.id = uka.kata_id
+        WHERE uka.user_id = ? AND uka.action_type = 'complete'
+        ORDER BY uka.timestamp DESC
+        LIMIT 10
+    """, (user['id'],))
+    completed_kata_ids = [row['id'] for row in cursor.fetchall()]
+    completed_katas_json = json.dumps([fetch_kata_details(kata_id) for kata_id in completed_kata_ids if fetch_kata_details(kata_id) is not None], indent=2)
+    compiled_content = compiled_content.replace('[[ your_last_completed ]]', completed_katas_json)
+
+    return jsonify({'success': True, 'compiled_content': compiled_content})
+
 if __name__ == '__main__':
     app.run(debug=True)
