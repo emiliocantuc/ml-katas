@@ -181,6 +181,34 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('index'))
 
+def validate_kata_data(kata_data):
+    errors = []
+    title = kata_data.get('title')
+    content = kata_data.get('content')
+    topics = kata_data.get('topics', [])
+    difficulty = kata_data.get('difficulty')
+    completion_time = kata_data.get('completion_time')
+
+    if not title or not title.strip():
+        errors.append('Title is required.')
+    if not content or not content.strip():
+        errors.append('Content is required.')
+    if len(title) > 100:
+        errors.append('Title cannot be longer than 100 characters.')
+    if len(content) > 10000:
+        errors.append('Content cannot be longer than 10000 characters.')
+    if difficulty not in ALLOWED_DIFFICULTIES:
+        errors.append('Invalid difficulty.')
+    if completion_time not in ALLOWED_COMPLETION_TIMES:
+        errors.append('Invalid completion time.')
+    if len(topics) > 5:
+        errors.append('You can only add up to 5 topics.')
+    for topic in topics:
+        if len(topic) > 20:
+            errors.append('Each topic must be 20 characters or less.')
+            break
+    return errors
+
 @app.route('/submit', methods=['GET', 'POST'])
 def submit_kata():
     user = get_current_user()
@@ -195,35 +223,19 @@ def submit_kata():
         difficulty = request.form['difficulty']
         completion_time = request.form['completion_time']
 
-        # Validation
-        if not title or not title.strip():
-            flash('Title is required.', 'error')
-            return redirect(url_for('submit_kata'))
-        if not content or not content.strip():
-            flash('Content is required.', 'error')
-            return redirect(url_for('submit_kata'))
-        if len(title) > 100:
-            flash('Title cannot be longer than 100 characters.', 'error')
-            return redirect(url_for('submit_kata'))
-        if len(content) > 10000:
-            flash('Content cannot be longer than 10000 characters.', 'error')
-            return redirect(url_for('submit_kata'))
-        if difficulty not in ALLOWED_DIFFICULTIES:
-            flash('Invalid difficulty.', 'error')
-            return redirect(url_for('submit_kata'))
+        kata_data = {
+            'title': title,
+            'content': content,
+            'topics': topics,
+            'difficulty': difficulty,
+            'completion_time': completion_time
+        }
 
-        if completion_time not in ALLOWED_COMPLETION_TIMES:
-            flash('Invalid completion time.', 'error')
+        errors = validate_kata_data(kata_data)
+        if errors:
+            for error in errors:
+                flash(error, 'error')
             return redirect(url_for('submit_kata'))
-
-        if len(topics) > 5:
-            flash('You can only add up to 5 topics.', 'error')
-            return redirect(url_for('submit_kata'))
-
-        for topic in topics:
-            if len(topic) > 20:
-                flash('Each topic must be 20 characters or less.', 'error')
-                return redirect(url_for('submit_kata'))
 
         kata_id = str(uuid.uuid4())
         author_id = user['id']
@@ -378,22 +390,14 @@ def complete_kata(kata_id):
         return redirect(url_for('completed_katas'))
     return redirect(url_for('view_kata', kata_id=kata_id))
 
-@app.route('/saved_katas')
-def saved_katas():
-    user = get_current_user()
-    if not user:
-        flash('Please log in to view your saved katas.', 'error')
-        return redirect(url_for('login'))
-
+def get_katas_by_action(user_id, action_type):
     db = get_db()
     cursor = db.cursor()
-    # Query user_kata_actions for saved katas
-    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN user_kata_actions uka ON k.id = uka.kata_id JOIN users u ON k.author_id = u.id WHERE uka.user_id = ? AND uka.action_type = 'save'", (user['id'],))
-    saved_katas_data = cursor.fetchall()
+    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN user_kata_actions uka ON k.id = uka.kata_id JOIN users u ON k.author_id = u.id WHERE uka.user_id = ? AND uka.action_type = ?", (user_id, action_type))
+    katas_data = cursor.fetchall()
 
-    saved_katas_list = []
-    user_id = user['id']
-    for kata_row in saved_katas_data:
+    katas_list = []
+    for kata_row in katas_data:
         kata_dict = dict(kata_row)
         kata_dict['author_id'] = kata_row['author_display_name']
         cursor.execute("SELECT t.name FROM topics t JOIN kata_topics kt ON t.id = kt.topic_id WHERE kt.kata_id = ?", (kata_row['id'],))
@@ -407,8 +411,17 @@ def saved_katas():
         cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'complete'", (user_id, kata_row['id']))
         kata_dict['is_completed'] = cursor.fetchone() is not None
 
-        saved_katas_list.append(kata_dict)
+        katas_list.append(kata_dict)
+    return katas_list
 
+@app.route('/saved_katas')
+def saved_katas():
+    user = get_current_user()
+    if not user:
+        flash('Please log in to view your saved katas.', 'error')
+        return redirect(url_for('login'))
+
+    saved_katas_list = get_katas_by_action(user['id'], 'save')
     return render_template('kata_list.html', katas=saved_katas_list, user=user, page_title="Saved Katas")
 
 @app.route('/completed_katas')
@@ -418,30 +431,7 @@ def completed_katas():
         flash('Please log in to view your completed katas.', 'error')
         return redirect(url_for('login'))
 
-    db = get_db()
-    cursor = db.cursor()
-    # Query user_kata_actions for completed katas
-    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN user_kata_actions uka ON k.id = uka.kata_id JOIN users u ON k.author_id = u.id WHERE uka.user_id = ? AND uka.action_type = 'complete'", (user['id'],))
-    completed_katas_data = cursor.fetchall()
-
-    completed_katas_list = []
-    user_id = user['id']
-    for kata_row in completed_katas_data:
-        kata_dict = dict(kata_row)
-        kata_dict['author_id'] = kata_row['author_display_name']
-        cursor.execute("SELECT t.name FROM topics t JOIN kata_topics kt ON t.id = kt.topic_id WHERE kt.kata_id = ?", (kata_row['id'],))
-        kata_dict['topics'] = [row['name'] for row in cursor.fetchall()]
-
-        # Fetch user action status for completed katas
-        cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'upvote'", (user_id, kata_row['id']))
-        kata_dict['is_upvoted'] = cursor.fetchone() is not None
-        cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'save'", (user_id, kata_row['id']))
-        kata_dict['is_saved'] = cursor.fetchone() is not None
-        cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'complete'", (user_id, kata_row['id']))
-        kata_dict['is_completed'] = cursor.fetchone() is not None
-
-        completed_katas_list.append(kata_dict)
-
+    completed_katas_list = get_katas_by_action(user['id'], 'complete')
     return render_template('kata_list.html', katas=completed_katas_list, user=user, page_title="Completed Katas")
 
 @app.route('/bulk_upload_katas', methods=['POST'])
@@ -482,42 +472,21 @@ def bulk_upload_katas():
 
     for kata_data in kata_data_list:
         try:
+            # Adapt to the expected structure for validate_kata_data
+            topics_str = kata_data.get('topics', '')
+            kata_data['topics'] = [t.strip() for t in topics_str.split(',') if t.strip()]
+
+            validation_errors = validate_kata_data(kata_data)
+            if validation_errors:
+                for error in validation_errors:
+                    errors.append(f"Error for kata '{kata_data.get('title', 'N/A')}': {error}")
+                continue
+
             title = kata_data.get('title')
             content = kata_data.get('content')
-            topics_str = kata_data.get('topics', '')
-            topics = [t.strip() for t in topics_str.split(',') if t.strip()]
-            difficulty = kata_data.get('difficulty', 'medium')
-            completion_time = kata_data.get('completion_time', '>1hr')
-
-            # Validation
-            if difficulty not in ALLOWED_DIFFICULTIES:
-                errors.append(f"Invalid difficulty for kata: {title}")
-                continue
-
-            if completion_time not in ALLOWED_COMPLETION_TIMES:
-                errors.append(f"Invalid completion time for kata: {title}")
-                continue
-
-            if len(topics) > 5:
-                errors.append(f"Too many topics for kata: {title}")
-                continue
-
-            for topic in topics:
-                if len(topic) > 20:
-                    errors.append(f"Invalid topic length for kata: {title}")
-                    continue
-
-            if not all([title, title.strip(), content, content.strip()]):
-                errors.append(f"Skipping kata due to missing title or content: {kata_data.get('title', 'N/A')}")
-                continue
-
-            if len(title) > 100:
-                errors.append(f"Title for kata '{title}' is too long (max 100 chars).")
-                continue
-
-            if len(content) > 10000:
-                errors.append(f"Content for kata '{title}' is too long (max 10000 chars).")
-                continue
+            topics = kata_data.get('topics')
+            difficulty = kata_data.get('difficulty')
+            completion_time = kata_data.get('completion_time')
 
             kata_id = str(uuid.uuid4())
             author_id = user['id']
