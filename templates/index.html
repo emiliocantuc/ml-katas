@@ -41,18 +41,33 @@
                 <p>{{ (kata.content | striptags | truncate(200)) if kata.content else '' }}</p>
                 
                 <div>
-                    <form action="{{ url_for('upvote_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
-                        <input type="hidden" name="source" value="index">
-                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Upvoted" if kata.is_upvoted else "Upvote" }} ({{ kata.upvotes }})</button>
-                    </form>
-                    <form action="{{ url_for('save_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
-                        <input type="hidden" name="source" value="index">
-                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Saved" if kata.is_saved else "Save" }} ({{ kata.saves }})</button>
-                    </form>
-                    <form action="{{ url_for('complete_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
-                        <input type="hidden" name="source" value="index">
-                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Completed" if kata.is_completed else "Complete" }} ({{ kata.completions }})</button>
-                    </form>
+                    <span id="upvote-button-{{ kata.id }}"
+                          hx-post="{{ url_for('upvote_kata', kata_id=kata.id) }}"
+                          hx-target="this"
+                          hx-swap="outerHTML"
+                          style="display: inline-block;">
+                        <button type="button" {% if not user %}disabled{% endif %}>
+                            {{ "Upvoted" if kata.is_upvoted else "Upvote" }} ({{ kata.upvotes }})
+                        </button>
+                    </span>
+                    <span id="save-button-{{ kata.id }}"
+                          hx-post="{{ url_for('save_kata', kata_id=kata.id) }}"
+                          hx-target="this"
+                          hx-swap="outerHTML"
+                          style="display: inline-block;">
+                        <button type="button" {% if not user %}disabled{% endif %}>
+                            {{ "Saved" if kata.is_saved else "Save" }} ({{ kata.saves }})
+                        </button>
+                    </span>
+                    <span id="complete-button-{{ kata.id }}"
+                          hx-post="{{ url_for('complete_kata', kata_id=kata.id) }}"
+                          hx-target="this"
+                          hx-swap="outerHTML"
+                          style="display: inline-block;">
+                        <button type="button" {% if not user %}disabled{% endif %}>
+                            {{ "Completed" if kata.is_completed else "Complete" }} ({{ kata.completions }})
+                        </button>
+                    </span>
                 </div>
             </li>
             {% endfor %}

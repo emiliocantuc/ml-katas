@@ -8,7 +8,7 @@
 #     "markdown2",
 # ]
 # ///
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g, render_template_string
 import markdown2
 import uuid
 import re
@@ -374,16 +374,23 @@ def upvote_kata(kata_id):
         cursor.execute("INSERT INTO user_kata_actions (user_id, kata_id, action_type) VALUES (?, ?, ?)", (user['id'], kata_id, 'upvote'))
         cursor.execute("UPDATE katas SET upvotes = upvotes + 1 WHERE id = ?", (kata_id,))
     db.commit()
-    
-    source = request.form.get('source')
-    if source == 'index':
-        query_params = {k: v for k, v in request.args.items() if k != 'page'}
-        return redirect(url_for('index', page=request.args.get('page', 1, type=int), **query_params))
-    elif source == 'saved':
-        return redirect(url_for('saved_katas'))
-    elif source == 'completed':
-        return redirect(url_for('completed_katas'))
-    return redirect(url_for('view_kata', kata_id=kata_id))
+
+    # Fetch the updated kata data
+    updated_kata = get_kata_by_id(kata_id, user['id'])
+
+    # Render the updated button snippet
+    return render_template_string(
+        """<span id=\"upvote-button-{{ kata.id }}"
+              hx-post=\"{{ url_for('upvote_kata', kata_id=kata.id) }}"
+              hx-target=\"this"
+              hx-swap=\"outerHTML"
+              style=\"display: inline-block;">\n            <button type=\"button\" {% if not user %}disabled{% endif %}>
+                {{ \"Upvoted\" if kata.is_upvoted else \"Upvote\" }} ({{ kata.upvotes }})
+            </button>
+        </span>""",
+        kata=updated_kata, user=user
+    )
+
 
 @app.route('/kata/<int:kata_id>/save', methods=['POST'])
 def save_kata(kata_id):
@@ -407,15 +414,23 @@ def save_kata(kata_id):
         cursor.execute("UPDATE katas SET saves = saves + 1 WHERE id = ?", (kata_id,))
     db.commit()
 
-    source = request.form.get('source')
-    if source == 'index':
-        query_params = {k: v for k, v in request.args.items() if k != 'page'}
-        return redirect(url_for('index', page=request.args.get('page', 1, type=int), **query_params))
-    elif source == 'saved':
-        return redirect(url_for('saved_katas'))
-    elif source == 'completed':
-        return redirect(url_for('completed_katas'))
-    return redirect(url_for('view_kata', kata_id=kata_id))
+    # Fetch the updated kata data
+    updated_kata = get_kata_by_id(kata_id, user['id'])
+
+    # Render the updated button snippet
+    return render_template_string(
+        """<span id=\"save-button-{{ kata.id }}"
+              hx-post=\"{{ url_for('save_kata', kata_id=kata.id) }}"
+              hx-target=\"this"
+              hx-swap=\"outerHTML"
+              style=\"display: inline-block;\">
+            <button type=\"button" {% if not user %}disabled{% endif %}>
+                {{ \"Saved\" if kata.is_saved else \"Save\" }} ({{ kata.saves }})
+            </button>
+        </span>""",
+        kata=updated_kata, user=user
+    )
+
 
 @app.route('/kata/<int:kata_id>/complete', methods=['POST'])
 def complete_kata(kata_id):
@@ -439,15 +454,22 @@ def complete_kata(kata_id):
         cursor.execute("UPDATE katas SET completions = completions + 1 WHERE id = ?", (kata_id,))
     db.commit()
 
-    source = request.form.get('source')
-    if source == 'index':
-        query_params = {k: v for k, v in request.args.items() if k != 'page'}
-        return redirect(url_for('index', page=request.args.get('page', 1, type=int), **query_params))
-    elif source == 'saved':
-        return redirect(url_for('saved_katas'))
-    elif source == 'completed':
-        return redirect(url_for('completed_katas'))
-    return redirect(url_for('view_kata', kata_id=kata_id))
+    # Fetch the updated kata data
+    updated_kata = get_kata_by_id(kata_id, user['id'])
+
+    # Render the updated button snippet
+    return render_template_string(
+        """<span id=\"complete-button-{{ kata.id }}"
+              hx-post=\"{{ url_for('complete_kata', kata_id=kata.id) }}"
+              hx-target=\"this"
+              hx-swap=\"outerHTML"
+              style=\"display: inline-block;\">
+            <button type=\"button" {% if not user %}disabled{% endif %}>
+                {{ \"Completed\" if kata.is_completed else \"Complete\" }} ({{ kata.completions }})
+            </button>
+        </span>""",
+        kata=updated_kata, user=user
+    )
 
 def get_katas_by_action(user_id, action_type):
     db = get_db()
