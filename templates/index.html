@@ -1,0 +1,64 @@
+
+{% extends "base.html" %}
+
+{% block title %}All Katas - ML Katas{% endblock %}
+
+{% block content %}
+    <section>
+        <h2>All Katas</h2>
+        <form action="{{ url_for('index') }}" method="get" class="search-form">
+            <input type="text" name="search" placeholder="Search katas..." value="{{ search_query if search_query else '' }}">
+            <button type="submit">Search</button>
+        </form>
+        <ul class="kata-list">
+            {% for kata in katas %}
+            <li class="kata-item">
+                <a href="{{ url_for('view_kata', kata_id=kata.id) }}">
+                    <h3>{{ kata.title }}</h3>
+                </a>
+                <div class="meta">
+                    <a href="{{ url_for('index', difficulty=kata.difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">{{ kata.difficulty }}</a>
+                    (<a href="{{ url_for('index', difficulty=current_difficulty, completion_time=kata.completion_time, topic=current_topic, search=search_query) }}">{{ kata.completion_time }}</a>)
+                    {% for topic in kata.topics %}
+                        <a href="{{ url_for('index', difficulty=current_difficulty, completion_time=current_completion_time, topic=topic, search=search_query) }}"><span class="topic">{{ topic }}</span></a>
+                    {% endfor %}
+                </div>
+                <p>{{ (kata.content | striptags | truncate(200)) if kata.content else '' }}</p>
+                
+                <div>
+                    <form action="{{ url_for('upvote_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                        <input type="hidden" name="source" value="index">
+                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Upvoted" if kata.is_upvoted else "Upvote" }} ({{ kata.upvotes }})</button>
+                    </form>
+                    <form action="{{ url_for('save_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                        <input type="hidden" name="source" value="index">
+                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Saved" if kata.is_saved else "Save" }} ({{ kata.saves }})</button>
+                    </form>
+                    <form action="{{ url_for('complete_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                        <input type="hidden" name="source" value="index">
+                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Completed" if kata.is_completed else "Complete" }} ({{ kata.completions }})</button>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="pagination">
+            {% if page > 1 %}
+                <a href="{{ url_for('index', page=page-1, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">&laquo; Previous</a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                    <span class="current">{{ p }}</span>
+                {% else %}
+                    <a href="{{ url_for('index', page=p, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+                <a href="{{ url_for('index', page=page+1, difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">Next &raquo;</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

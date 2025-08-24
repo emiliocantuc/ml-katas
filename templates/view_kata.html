@@ -1,0 +1,59 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ kata.title }} - ML Katas{% endblock %}
+
+{% block content %}
+    <article class="kata-item">
+        <h2>{{ kata.title }}</h2>
+        <div class="meta">
+            {{ kata.difficulty }} ({{ kata.completion_time }})
+            {% for topic in kata.topics %}
+                <span class="topic">{{ topic }}</span>
+            {% endfor %}
+        </div>
+        <div class="meta">
+            <span>by {{ kata.author_id }}</span>
+        </div>
+        <hr>
+        <div id="kata-content">{{ kata.html_content | safe }}</div>
+        <hr>
+        <div>
+            <form action="{{ url_for('upvote_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                <button type="submit" {% if not user %}disabled{% endif %}>{{ "Upvoted" if kata.is_upvoted else "Upvote" }} ({{ kata.upvotes }})</button>
+            </form>
+            <form action="{{ url_for('save_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                <button type="submit" {% if not user %}disabled{% endif %}>{{ "Saved" if kata.is_saved else "Save" }} ({{ kata.saves }})</button>
+            </form>
+            <form action="{{ url_for('complete_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                <button type="submit" {% if not user %}disabled{% endif %}>{{ "Completed" if kata.is_completed else "Complete" }} ({{ kata.completions }})</button>
+            </form>
+        </div>
+    </article>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('pre code').forEach((block) => {
+                const button = document.createElement('button');
+                button.className = 'copy-code-button';
+                button.innerText = 'Copy';
+                button.onclick = () => {
+                    navigator.clipboard.writeText(block.innerText).then(() => {
+                        button.innerText = 'Copied!';
+                        setTimeout(() => { button.innerText = 'Copy'; }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy: ', err);
+                    });
+                };
+
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.marginBottom = '1em';
+                
+                block.parentNode.insertBefore(wrapper, block);
+                wrapper.appendChild(block);
+                wrapper.appendChild(button);
+            });
+        });
+    </script>
+{% endblock %}

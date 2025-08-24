@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - ML Katas{% endblock %}
+
+{% block content %}
+    <section>
+        <h2>{{ page_title }}</h2>
+        <ul class="kata-list">
+            {% for kata in katas %}
+            <li class="kata-item">
+                <a href="{{ url_for('view_kata', kata_id=kata.id) }}">
+                    <h3>{{ kata.title }}</h3>
+                </a>
+                <div class="meta">
+                    <a href="{{ url_for('index', difficulty=kata.difficulty) }}">{{ kata.difficulty }}</a>
+                    (<a href="{{ url_for('index', completion_time=kata.completion_time) }}">{{ kata.completion_time }}</a>)
+                    {% for topic in kata.topics %}
+                        <a href="{{ url_for('index', topic=topic) }}"><span class="topic">{{ topic }}</span></a>
+                    {% endfor %}
+                </div>
+                <p>{{ (kata.content | striptags | truncate(200)) if kata.content else '' }}</p>
+                
+                <div>
+                    <form action="{{ url_for('upvote_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                        <input type="hidden" name="source" value="{{ page_title | lower | replace(' ', '') }}">
+                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Upvoted" if kata.is_upvoted else "Upvote" }} ({{ kata.upvotes }})</button>
+                    </form>
+                    <form action="{{ url_for('save_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                        <input type="hidden" name="source" value="{{ page_title | lower | replace(' ', '') }}">
+                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Saved" if kata.is_saved else "Save" }} ({{ kata.saves }})</button>
+                    </form>
+                    <form action="{{ url_for('complete_kata', kata_id=kata.id) }}" method="post" style="display: inline;">
+                        <input type="hidden" name="source" value="{{ page_title | lower | replace(' ', '') }}">
+                        <button type="submit" {% if not user %}disabled{% endif %}>{{ "Completed" if kata.is_completed else "Complete" }} ({{ kata.completions }})</button>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% if not katas %}
+            <p>No {{ page_title | lower }} yet.</p>
+        {% endif %}
+    </section>
+{% endblock %}

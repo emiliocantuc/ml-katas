@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Kata - ML Katas{% endblock %}
+
+{% block content %}
+    <h2>Submit a New Kata</h2>
+    <form method="post">
+        <div class="form-section">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+
+        <div class="form-section">
+            <label for="content">Content (Markdown supported)</label>
+            <textarea id="content" name="content" rows="15" required oninput="updatePreview()"></textarea>
+        </div>
+
+        <div class="form-section">
+            <h3>Live Preview</h3>
+            <div id="preview" class="preview-content"></div>
+        </div>
+
+        <div class="form-section">
+            <label for="topics">Topics (comma-separated)</label>
+            <input type="text" id="topics" name="topics">
+        </div>
+
+        <div class="form-section">
+            <label for="difficulty">Difficulty</label>
+            <select id="difficulty" name="difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+
+        <div class="form-section">
+            <label for="completion_time">Expected Completion Time</label>
+            <select id="completion_time" name="completion_time">
+                <option value="<10 mins"><10 mins</option>
+                <option value="<30 mins"><30 mins</option>
+                <option value="<1hr"><1hr</option>
+                <option value=">1hr">>1hr</option>
+            </select>
+        </div>
+
+        <button type="submit">Submit Single Kata</button>
+    </form>
+    <br><br>
+    <hr>
+
+    <h2>Bulk Upload Katas (JSON)</h2>
+    <form action="{{ url_for('bulk_upload_katas') }}" method="post" enctype="multipart/form-data">
+        <div class="form-section">
+            <label for="json_data">Paste JSON Data:</label>
+            <textarea id="json_data" name="json_data" rows="15" placeholder='[
+    {
+        "title": "Kata Title 1",
+        "content": "# Markdown Content 1\n\nThis is the content of the first kata.",
+        "topics": "Python, Machine Learning",
+        "difficulty": "easy",
+        "completion_time": "<30 mins"
+    },
+    {
+        "title": "Kata Title 2",
+        "content": "# Markdown Content 2\n\nThis is the content of the second kata.",
+        "topics": "Deep Learning, Neural Networks",
+        "difficulty": "medium",
+        "completion_time": "<1hr"
+    }
+]'>
+</textarea>
+        </div>
+        <div class="form-section">
+            <label for="json_file">Or Upload JSON File:</label>
+            <input type="file" id="json_file" name="json_file" accept=".json">
+        </div>
+        <button type="submit">Upload Katas</button>
+    </form>
+
+    <script>
+        function updatePreview() {
+            const content = document.getElementById('content').value;
+            fetch('/preview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: content })
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('preview').innerHTML = html;
+            });
+        }
+        // Initial preview update
+        updatePreview();
+    </script>
+{% endblock %}
