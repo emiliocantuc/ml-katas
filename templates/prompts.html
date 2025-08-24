@@ -15,20 +15,42 @@
                 <input type="hidden" id="promptId" name="prompt_id">
                 <div class="form-section">
                     <label for="promptName">Name</label>
-                    <input type="text" id="promptName" name="prompt_name" required placeholder="Gemini with saved">
+                    <input type="text" id="promptName" name="prompt_name" required
+                        placeholder="Gemini with saved & completed">
                 </div>
                 <div class="form-section">
                     <label for="promptContent">Prompt Content</label>
-                    <textarea id="promptContent" name="prompt_content" rows="20" required></textarea>
-                    
+                    <textarea id="promptContent" name="prompt_content" rows="20" required placeholder="Help me learn pytorch and deepen my dl understanding by creating exercises or katas for me. 
+
+Here are a few katas that I thought were good and saved:
+
+[[ your_10_last_saved ]]
+
+And the last few I've completed:
+
+[[ your_last_completed ]]
+
+Generate 10 katas that you think will be fun and educational for me to complete. 
+
+Follow this schema for your output:
+
+[[ schema_details ]]
+"></textarea>
+
                     <div class="special-strings mt-4">
                         Insert special strings:
-                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ allowed_difficulties ]]">[[ allowed_difficulties ]]</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ allowed_times ]]">[[ allowed_times ]]</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_10_last_upvoted ]]">[[ your_10_last_upvoted ]]</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_10_last_saved ]]">[[ your_10_last_saved ]]</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ your_last_completed ]]">[[ your_last_completed ]]</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn" data-string="[[ schema_details ]]">[[ schema_details ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn"
+                            data-string="[[ allowed_difficulties ]]">[[ allowed_difficulties ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn"
+                            data-string="[[ allowed_times ]]">[[ allowed_times ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn"
+                            data-string="[[ your_10_last_upvoted ]]">[[ your_10_last_upvoted ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn"
+                            data-string="[[ your_10_last_saved ]]">[[ your_10_last_saved ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn"
+                            data-string="[[ your_last_completed ]]">[[ your_last_completed ]]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary insert-string-btn"
+                            data-string="[[ schema_details ]]">[[ schema_details ]]</button>
                     </div>
                 </div>
 
@@ -67,138 +89,138 @@
             <div class="form-section">
                 <textarea id="compiledOutput" name="compiled_output" rows="20" readonly></textarea>
             </div>
-            
+
         </div>
     </div>
 </div>
 
 <script>
-function insertAtCursor(field, text) {
-    const cursorPosition = field.selectionStart;
-    const originalContent = field.value;
-    field.value = originalContent.substring(0, cursorPosition) + text + originalContent.substring(field.selectionEnd);
-    field.selectionStart = cursorPosition + text.length;
-    field.selectionEnd = cursorPosition + text.length;
-    field.focus();
-}
+    function insertAtCursor(field, text) {
+        const cursorPosition = field.selectionStart;
+        const originalContent = field.value;
+        field.value = originalContent.substring(0, cursorPosition) + text + originalContent.substring(field.selectionEnd);
+        field.selectionStart = cursorPosition + text.length;
+        field.selectionEnd = cursorPosition + text.length;
+        field.focus();
+    }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const promptForm = document.getElementById('promptForm');
-    const promptIdInput = document.getElementById('promptId');
-    const promptNameInput = document.getElementById('promptName');
-    const promptContentInput = document.getElementById('promptContent');
-    const clearFormButton = document.getElementById('clearFormButton');
-    const compiledOutput = document.getElementById('compiledOutput');
-    const copyOutputButton = document.getElementById('copyOutputButton');
+    document.addEventListener('DOMContentLoaded', function () {
+        const promptForm = document.getElementById('promptForm');
+        const promptIdInput = document.getElementById('promptId');
+        const promptNameInput = document.getElementById('promptName');
+        const promptContentInput = document.getElementById('promptContent');
+        const clearFormButton = document.getElementById('clearFormButton');
+        const compiledOutput = document.getElementById('compiledOutput');
+        const copyOutputButton = document.getElementById('copyOutputButton');
 
-    // Handle inserting special strings
-    document.querySelectorAll('.insert-string-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const stringToInsert = this.dataset.string;
-            insertAtCursor(promptContentInput, stringToInsert);
+        // Handle inserting special strings
+        document.querySelectorAll('.insert-string-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const stringToInsert = this.dataset.string;
+                insertAtCursor(promptContentInput, stringToInsert);
+            });
         });
-    });
 
-    // Handle Save/Update Prompt
-    promptForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const formData = new FormData(promptForm);
-        const response = await fetch('/save_prompt', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await response.json();
-        if (data.success) {
-            // No success alert
-            promptIdInput.value = data.prompt_id; // Update hidden promptId
-            location.reload(); // Reload to show updated list
-        } else {
-            alert('Error: ' + data.message);
-        }
-    });
-
-    // Handle Edit Prompt
-    document.querySelectorAll('.edit-prompt-btn').forEach(button => {
-        button.addEventListener('click', async function() {
-            const promptId = this.dataset.id;
-            const response = await fetch(`/get_prompt/${promptId}`);
+        // Handle Save/Update Prompt
+        promptForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const formData = new FormData(promptForm);
+            const response = await fetch('/save_prompt', {
+                method: 'POST',
+                body: formData
+            });
             const data = await response.json();
             if (data.success) {
-                promptIdInput.value = data.prompt.id;
-                promptNameInput.value = data.prompt.name;
-                promptContentInput.value = data.prompt.content;
+                // No success alert
+                promptIdInput.value = data.prompt_id; // Update hidden promptId
+                location.reload(); // Reload to show updated list
             } else {
                 alert('Error: ' + data.message);
             }
         });
-    });
 
-    // Handle Delete Prompt
-    document.querySelectorAll('.delete-prompt-btn').forEach(button => {
-        button.addEventListener('click', async function() {
-            if (confirm('Are you sure you want to delete this prompt?')) {
+        // Handle Edit Prompt
+        document.querySelectorAll('.edit-prompt-btn').forEach(button => {
+            button.addEventListener('click', async function () {
                 const promptId = this.dataset.id;
-                const formData = new FormData();
-                formData.append('prompt_id', promptId);
-                const response = await fetch(`/delete_prompt/${promptId}`, {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch(`/get_prompt/${promptId}`);
                 const data = await response.json();
                 if (data.success) {
-                    location.reload(); // No success alert, just reload
+                    promptIdInput.value = data.prompt.id;
+                    promptNameInput.value = data.prompt.name;
+                    promptContentInput.value = data.prompt.content;
                 } else {
                     alert('Error: ' + data.message);
                 }
-            }
+            });
         });
-    });
 
-    // Handle Compile Prompt
-    document.querySelectorAll('.compile-prompt-btn').forEach(button => {
-        button.addEventListener('click', async function() {
-            const promptId = this.dataset.id;
-            const getResponse = await fetch(`/get_prompt/${promptId}`);
-            const getData = await getResponse.json();
-
-            if (getData.success) {
-                const promptContent = getData.prompt.content;
-                const formData = new FormData();
-                formData.append('prompt_content', promptContent);
-
-                const compileResponse = await fetch('/compile_prompt', {
-                    method: 'POST',
-                    body: formData
-                });
-                const compileData = await compileResponse.json();
-
-                if (compileData.success) {
-                    console.log('Compile Data:', compileData); // Add this line for debugging
-                    console.log('Compiled Content:', compileData.compiled_content); // Add this line for debugging
-                    compiledOutput.value = compileData.compiled_content;
-                    compiledOutput.scrollIntoView(); // Scroll to output (default behavior: 'auto')
-                } else {
-                    alert('Error compiling prompt: ' + compileData.message);
+        // Handle Delete Prompt
+        document.querySelectorAll('.delete-prompt-btn').forEach(button => {
+            button.addEventListener('click', async function () {
+                if (confirm('Are you sure you want to delete this prompt?')) {
+                    const promptId = this.dataset.id;
+                    const formData = new FormData();
+                    formData.append('prompt_id', promptId);
+                    const response = await fetch(`/delete_prompt/${promptId}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        location.reload(); // No success alert, just reload
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
                 }
-            } else {
-                alert('Error fetching prompt for compilation: ' + getData.message);
-            }
+            });
+        });
+
+        // Handle Compile Prompt
+        document.querySelectorAll('.compile-prompt-btn').forEach(button => {
+            button.addEventListener('click', async function () {
+                const promptId = this.dataset.id;
+                const getResponse = await fetch(`/get_prompt/${promptId}`);
+                const getData = await getResponse.json();
+
+                if (getData.success) {
+                    const promptContent = getData.prompt.content;
+                    const formData = new FormData();
+                    formData.append('prompt_content', promptContent);
+
+                    const compileResponse = await fetch('/compile_prompt', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const compileData = await compileResponse.json();
+
+                    if (compileData.success) {
+                        console.log('Compile Data:', compileData); // Add this line for debugging
+                        console.log('Compiled Content:', compileData.compiled_content); // Add this line for debugging
+                        compiledOutput.value = compileData.compiled_content;
+                        compiledOutput.scrollIntoView(); // Scroll to output (default behavior: 'auto')
+                    } else {
+                        alert('Error compiling prompt: ' + compileData.message);
+                    }
+                } else {
+                    alert('Error fetching prompt for compilation: ' + getData.message);
+                }
+            });
+        });
+
+        // Clear Form
+        clearFormButton.addEventListener('click', function () {
+            promptIdInput.value = '';
+            promptNameInput.value = '';
+            promptContentInput.value = '';
+        });
+
+        // Copy to Clipboard
+        copyOutputButton.addEventListener('click', function () {
+            compiledOutput.select();
+            document.execCommand('copy');
+            alert('Compiled output copied to clipboard!');
         });
     });
-
-    // Clear Form
-    clearFormButton.addEventListener('click', function() {
-        promptIdInput.value = '';
-        promptNameInput.value = '';
-        promptContentInput.value = '';
-    });
-
-    // Copy to Clipboard
-    copyOutputButton.addEventListener('click', function() {
-        compiledOutput.select();
-        document.execCommand('copy');
-        alert('Compiled output copied to clipboard!');
-    });
-});
 </script>
 {% endblock %}
