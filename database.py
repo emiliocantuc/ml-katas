@@ -25,6 +25,7 @@ def init_db():
                 completions INTEGER DEFAULT 0,
                 difficulty TEXT,
                 completion_time TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (author_id) REFERENCES users (id)
             )
         ''')

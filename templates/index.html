@@ -17,6 +17,12 @@
                     <h3>{{ kata.title }}</h3>
                 </a>
                 <div class="meta">
+                    {% set time_filter = kata.created_at | humanize_time %}
+                    {% if time_filter in ['today', 'this week', 'this month', 'this year'] %}
+                        <a href="{{ url_for('index', difficulty=current_difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query, created_at=time_filter.replace(' ', '_')) }}"><span class="creation-date">{{ time_filter }}</span></a>
+                    {% else %}
+                        <span class="creation-date">{{ time_filter }}</span>
+                    {% endif %}
                     <a href="{{ url_for('index', difficulty=kata.difficulty, completion_time=current_completion_time, topic=current_topic, search=search_query) }}">{{ kata.difficulty }}</a>
                     (<a href="{{ url_for('index', difficulty=current_difficulty, completion_time=kata.completion_time, topic=current_topic, search=search_query) }}">{{ kata.completion_time }}</a>)
                     {% for topic in kata.topics %}

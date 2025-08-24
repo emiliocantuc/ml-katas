@@ -16,6 +16,7 @@ from database import get_db, init_db, DATABASE
 import os
 import sqlite3
 import json
+from datetime import datetime, timedelta
 
 KATAS_PER_PAGE = 20
 ALLOWED_COMPLETION_TIMES = ['<10 mins', '<30 mins', '<1 hr', '>1 hr']
@@ -24,6 +25,26 @@ ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard']
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
+
+@app.template_filter('humanize_time')
+def humanize_time(dt):
+    if isinstance(dt, str):
+        dt = datetime.fromisoformat(dt)
+    now = datetime.now()
+    diff = now - dt
+
+    if diff.days == 0:
+        return 'today'
+    elif diff.days == 1:
+        return 'yesterday'
+    elif diff.days < 7:
+        return 'this week'
+    elif diff.days < 30:
+        return 'this month'
+    elif diff.days < 365:
+        return 'this year'
+    else:
+        return 'last year'
 
 # Initialize the database when the app starts
 with app.app_context():
@@ -100,6 +121,26 @@ def index():
         params.append(topic_filter)
 
     search_query = request.args.get('search')
+    created_at_filter = request.args.get('created_at')
+
+    if created_at_filter:
+        now = datetime.now()
+        if created_at_filter == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif created_at_filter == 'this_week':
+            start_date = now - timedelta(days=now.weekday())
+            start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif created_at_filter == 'this_month':
+            start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        elif created_at_filter == 'this_year':
+            start_date = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            start_date = None
+        
+        if start_date:
+            conditions.append("k.created_at >= ?")
+            params.append(start_date)
+
     if search_query:
         # Use FTS5 for searching titles and content
         conditions.append("k.id IN (SELECT rowid FROM katas_fts WHERE katas_fts MATCH ?)")
@@ -149,6 +190,7 @@ def index():
                            current_difficulty=difficulty_filter,
                            current_completion_time=completion_time_filter,
                            current_topic=topic_filter,
+                           current_created_at=created_at_filter,
                            search_query=search_query)
 
 @app.route('/login', methods=['GET', 'POST'])
