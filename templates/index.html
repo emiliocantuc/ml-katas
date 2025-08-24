@@ -56,6 +56,9 @@
                 </div>
             </li>
             {% endfor %}
+            {% if not katas %}
+            <p style="text-align: center;margin-top: 64px;">No katas found. Try adjusting your filters or search terms.</p>
+            {% endif %}
         </ul>
 
         <div class="pagination">
