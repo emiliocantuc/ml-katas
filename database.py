@@ -73,7 +73,6 @@ def init_db():
             )
         ''')
         # Create FTS5 table for katas
-        cursor.execute('DROP TABLE IF EXISTS katas_fts;')
         cursor.execute('''
             CREATE VIRTUAL TABLE IF NOT EXISTS katas_fts USING fts5(title, content, topics_text);
         '''
