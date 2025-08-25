@@ -17,7 +17,7 @@
             <span class="creation-date">{{ kata.created_at | humanize_time }} </span><span>by {{ kata.author_id }}</span>
         </div>
         <hr>
-        <div id="kata-content">{{ kata.html_content | safe }}</div>
+        <div id="kata-content" data-markdown="{{ kata.content }}">{{ kata.html_content | safe }}</div>
         <hr>
         <div>
             <span id="upvote-button-{{ kata.id }}"
@@ -47,6 +47,9 @@
                     {{ "Completed" if kata.is_completed else "Complete" }} ({{ kata.completions }})
                 </button>
             </span>
+            <span style="display: inline-block;">
+                <button type="button" id="copy-markdown-button">Copy Markdown</button>
+            </span>
         </div>
     </article>
 
@@ -72,6 +75,16 @@
                 block.parentNode.insertBefore(wrapper, block);
                 wrapper.appendChild(block);
                 wrapper.appendChild(button);
+            });
+
+            document.getElementById('copy-markdown-button').addEventListener('click', (e) => {
+                const markdownContent = document.getElementById('kata-content').dataset.markdown;
+                navigator.clipboard.writeText(markdownContent).then(() => {
+                    e.target.innerText = 'Copied!';
+                    setTimeout(() => { e.target.innerText = 'Copy Markdown'; }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy markdown: ', err);
+                });
             });
         });
     </script>
