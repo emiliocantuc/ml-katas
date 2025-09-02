@@ -12,9 +12,9 @@
     <header>
         <h1><a href="{{ url_for('index') }}">ML Katas</a></h1>
         <nav>
+            {% if user %}
             <a href="{{ url_for('submit_kata') }}">Submit</a>
             <a href="{{ url_for('prompts') }}">Prompts</a>
-            {% if user %}
             <a href="{{ url_for('saved') }}">Saved</a>
             <a href="{{ url_for('completed') }}">Completed</a>
             <a href="{{ url_for('logout') }}">Logout</a>
