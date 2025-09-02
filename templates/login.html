@@ -5,22 +5,24 @@
 {% block content %}
     <h2>Login or Register</h2>
 
-    
-
+    <div style="max-width: 400px;">
     <form method="post">
-        <p>If you have a secret username, enter it here to log in.</p>
-        <label for="secret_username">Secret Username</label>
-        <div style="display: flex; align-items: center;">
-            <input type="text" id="secret_username" name="secret_username" required autofocus style="flex-grow: 1; margin-right: 10px;">
+        <p>
+            Enter your secret username to login. 
+            <br>
+            New? generate a secret username and provide a display name.
+        </p>
+        
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <input type="text" id="secret_username" name="secret_username" required autofocus style="flex-grow: 1; margin-right: 10px;" placeholder="Secret Username">
             <button type="button" id="generateUsernameBtn" class="btn btn-secondary btn-sm">Generate</button>
         </div>
         
-        <p>If you are new, enter a display name and a desired secret username to register.</p>
-        <label for="display_name">Display Name</label>
-        <input type="text" id="display_name" name="display_name">
+        <input type="text" id="display_name" name="display_name" placeholder="Display Name" style="width: 100%; margin-bottom: 10px;">
 
         <button type="submit">Login / Register</button>
     </form>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -28,14 +30,14 @@
             const secretUsernameInput = document.getElementById('secret_username');
 
             generateUsernameBtn.addEventListener('click', function() {
-                // Generate a random UUID (Universally Unique Identifier)
-                // This is a common way to get a reasonably unique string
-                const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                    const r = Math.random() * 16 | 0,
-                        v = c == 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
-                });
-                secretUsernameInput.value = 'user-' + uuid.substring(0, 8); // Prepend 'user-' and shorten for readability
+                const array = new Uint32Array(20);
+                window.crypto.getRandomValues(array);
+                let username = '';
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                for (let i = 0; i < array.length; i++) {
+                    username += chars.charAt(array[i] % chars.length);
+                }
+                secretUsernameInput.value = 'u-' + username;
             });
         });
     </script>

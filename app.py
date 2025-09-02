@@ -199,7 +199,7 @@ def index():
 
     for kata_row in katas_data:
         kata_dict = dict(kata_row)
-        kata_dict['author_id'] = kata_row['author_display_name'] # Use display name
+        kata_dict['author_display_name'] = kata_row['author_display_name']
         # Fetch topics for each kata
         cursor.execute("SELECT t.name FROM topics t JOIN kata_topics kt ON t.id = kt.topic_id WHERE kt.kata_id = ?", (kata_row['id'],))
         kata_dict['topics'] = [row['name'] for row in cursor.fetchall()]
@@ -516,7 +516,7 @@ def get_katas_by_action(user_id, action_type):
     katas_list = []
     for kata_row in katas_data:
         kata_dict = dict(kata_row)
-        kata_dict['author_id'] = kata_row['author_display_name']
+        kata_dict['author_display_name'] = kata_row['author_display_name']
         cursor.execute("SELECT t.name FROM topics t JOIN kata_topics kt ON t.id = kt.topic_id WHERE kt.kata_id = ?", (kata_row['id'],))
         kata_dict['topics'] = [row['name'] for row in cursor.fetchall()]
 
