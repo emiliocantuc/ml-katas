@@ -82,7 +82,7 @@ def get_kata_by_id(kata_id, user_id=None):
         topics = [row['name'] for row in cursor.fetchall()]
         kata_dict = dict(kata)
         kata_dict['topics'] = topics
-        kata_dict['author_id'] = kata['author_display_name'] # Use display name
+        kata_dict['author_display_name'] = kata['author_display_name']
 
         if user_id:
             cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'upvote'", (user_id, kata_id))
@@ -470,6 +470,42 @@ def complete_kata(kata_id):
         </span>""",
         kata=updated_kata, user=user
     )
+
+
+@app.route('/kata/<int:kata_id>/delete', methods=['POST'])
+def delete_kata(kata_id):
+    user = get_current_user()
+    if not user:
+        flash('Please log in to delete katas.', 'error')
+        return redirect(url_for('login'))
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # Verify ownership
+    cursor.execute("SELECT author_id FROM katas WHERE id = ?", (kata_id,))
+    kata = cursor.fetchone()
+
+    if not kata:
+        return 'Kata not found', 404
+
+    if kata['author_id'] != user['id']:
+        flash('You are not authorized to delete this kata.', 'error')
+        return redirect(url_for('view_kata', kata_id=kata_id))
+
+    # First, delete from user_kata_actions
+    cursor.execute("DELETE FROM user_kata_actions WHERE kata_id = ?", (kata_id,))
+    
+    # Then, delete from kata_topics
+    cursor.execute("DELETE FROM kata_topics WHERE kata_id = ?", (kata_id,))
+    
+    # Finally, delete the kata itself
+    cursor.execute("DELETE FROM katas WHERE id = ?", (kata_id,))
+    
+    db.commit()
+
+    flash('Kata deleted successfully.', 'success')
+    return redirect(url_for('index'))
 
 def get_katas_by_action(user_id, action_type):
     db = get_db()

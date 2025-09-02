@@ -4,6 +4,5 @@ Improve ML skills by doing exercises (or "katas"). This [site](https://mlkatas.c
 
 TODOs
 - maybe a MCP?
-- delete kata
 - delete account
 - see my katas

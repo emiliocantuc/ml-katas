@@ -14,7 +14,7 @@
             {% endfor %}
         </div>
         <div class="meta">
-            <span class="creation-date">{{ kata.created_at | humanize_time }} </span><span>by {{ kata.author_id }}</span>
+            <span class="creation-date">{{ kata.created_at | humanize_time }} </span><span>by {{ kata.author_display_name }}</span>
         </div>
         <hr>
         <div id="kata-content" data-markdown="{{ kata.content }}">{{ kata.html_content | safe }}</div>
@@ -50,6 +50,13 @@
             <span style="display: inline-block;">
                 <button type="button" id="copy-markdown-button">Copy Markdown</button>
             </span>
+                        {% if user and kata.author_id == user.id %}
+            <span style="display: inline-block;">
+                <form action="{{ url_for('delete_kata', kata_id=kata.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" onclick="return confirm('Are you sure you want to delete this kata?')">Delete</button>
+                </form>
+            </span>
+            {% endif %}
         </div>
     </article>
 
