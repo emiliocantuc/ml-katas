@@ -40,6 +40,8 @@
         
         <p>
             {% if user %}
+            [<a href="{{ url_for('my_katas') }}">my katas</a>]
+            |
             [<a href="#" onclick="copyUsernameToClipboard('{{ user.secret_username }}'); return false;">copy my username</a>]
             |
             {% endif %}

@@ -531,6 +531,34 @@ def get_katas_by_action(user_id, action_type):
         katas_list.append(kata_dict)
     return katas_list
 
+def get_katas_by_author(author_id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN users u ON k.author_id = u.id WHERE k.author_id = ?", (author_id,))
+    katas_data = cursor.fetchall()
+
+    katas_list = []
+    user = get_current_user()
+    user_id = user['id'] if user else None
+
+    for kata_row in katas_data:
+        kata_dict = dict(kata_row)
+        kata_dict['author_display_name'] = kata_row['author_display_name']
+        cursor.execute("SELECT t.name FROM topics t JOIN kata_topics kt ON t.id = kt.topic_id WHERE kt.kata_id = ?", (kata_row['id'],))
+        kata_dict['topics'] = [row['name'] for row in cursor.fetchall()]
+
+        if user_id:
+            # Fetch user action status for the katas
+            cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'upvote'", (user_id, kata_row['id']))
+            kata_dict['is_upvoted'] = cursor.fetchone() is not None
+            cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'save'", (user_id, kata_row['id']))
+            kata_dict['is_saved'] = cursor.fetchone() is not None
+            cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'complete'", (user_id, kata_row['id']))
+            kata_dict['is_completed'] = cursor.fetchone() is not None
+
+        katas_list.append(kata_dict)
+    return katas_list
+
 @app.route('/saved_katas')
 def saved_katas():
     user = get_current_user()
@@ -550,6 +578,16 @@ def completed_katas():
 
     completed_katas_list = get_katas_by_action(user['id'], 'complete')
     return render_template('kata_list.html', katas=completed_katas_list, user=user, page_title="Completed Katas")
+
+@app.route('/my_katas')
+def my_katas():
+    user = get_current_user()
+    if not user:
+        flash('Please log in to view your katas.', 'error')
+        return redirect(url_for('login'))
+
+    my_katas_list = get_katas_by_author(user['id'])
+    return render_template('kata_list.html', katas=my_katas_list, user=user, page_title="My Katas")
 
 @app.route('/bulk_upload_katas', methods=['POST'])
 def bulk_upload_katas():
