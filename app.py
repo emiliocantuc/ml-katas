@@ -559,8 +559,8 @@ def get_katas_by_author(author_id):
         katas_list.append(kata_dict)
     return katas_list
 
-@app.route('/saved_katas')
-def saved_katas():
+@app.route('/saved')
+def saved():
     user = get_current_user()
     if not user:
         flash('Please log in to view your saved katas.', 'error')
@@ -569,8 +569,8 @@ def saved_katas():
     saved_katas_list = get_katas_by_action(user['id'], 'save')
     return render_template('kata_list.html', katas=saved_katas_list, user=user, page_title="Saved Katas")
 
-@app.route('/completed_katas')
-def completed_katas():
+@app.route('/completed')
+def completed():
     user = get_current_user()
     if not user:
         flash('Please log in to view your completed katas.', 'error')

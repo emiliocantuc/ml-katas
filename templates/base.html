@@ -15,8 +15,8 @@
             <a href="{{ url_for('submit_kata') }}">Submit</a>
             <a href="{{ url_for('prompts') }}">Prompts</a>
             {% if user %}
-            <a href="{{ url_for('saved_katas') }}">Saved</a>
-            <a href="{{ url_for('completed_katas') }}">Completed</a>
+            <a href="{{ url_for('saved') }}">Saved</a>
+            <a href="{{ url_for('completed') }}">Completed</a>
             <a href="{{ url_for('logout') }}">Logout</a>
             {% else %}
             <a href="{{ url_for('login') }}">Login</a>
