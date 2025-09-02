@@ -838,6 +838,46 @@ def compile_prompt():
 
     return jsonify({'success': True, 'compiled_content': compiled_content})
 
+@app.route('/delete_account', methods=['GET'])
+def delete_account():
+    user = get_current_user()
+    if not user:
+        flash('Please log in to delete your account.', 'error')
+        return redirect(url_for('login'))
+
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        # Get all katas by the user
+        cursor.execute("SELECT id FROM katas WHERE author_id = ?", (user['id'],))
+        kata_ids = [row['id'] for row in cursor.fetchall()]
+
+        if kata_ids:
+            # Delete all actions and topics associated with the user's katas
+            placeholders = ', '.join('?' for _ in kata_ids)
+            cursor.execute(f"DELETE FROM user_kata_actions WHERE kata_id IN ({placeholders})", kata_ids)
+            cursor.execute(f"DELETE FROM kata_topics WHERE kata_id IN ({placeholders})", kata_ids)
+            # Delete the katas
+            cursor.execute(f"DELETE FROM katas WHERE id IN ({placeholders})", kata_ids)
+
+        # Delete all actions by the user on other katas
+        cursor.execute("DELETE FROM user_kata_actions WHERE user_id = ?", (user['id'],))
+        # Delete all prompts by the user
+        cursor.execute("DELETE FROM prompts WHERE user_id = ?", (user['id'],))
+        # Delete the user
+        cursor.execute("DELETE FROM users WHERE id = ?", (user['id'],))
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        flash(f'An error occurred while deleting your account: {e}', 'error')
+        return redirect(url_for('index'))
+
+    session.pop('username', None)
+    flash('Your account has been successfully deleted.', 'success')
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(port)
