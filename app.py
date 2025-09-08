@@ -510,7 +510,7 @@ def delete_kata(kata_id):
 def get_katas_by_action(user_id, action_type):
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN user_kata_actions uka ON k.id = uka.kata_id JOIN users u ON k.author_id = u.id WHERE uka.user_id = ? AND uka.action_type = ?", (user_id, action_type))
+    cursor.execute("SELECT k.*, u.display_name as author_display_name FROM katas k JOIN user_kata_actions uka ON k.id = uka.kata_id JOIN users u ON k.author_id = u.id WHERE uka.user_id = ? AND uka.action_type = ? ORDER BY uka.timestamp DESC", (user_id, action_type))
     katas_data = cursor.fetchall()
 
     katas_list = []
