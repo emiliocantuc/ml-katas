@@ -170,12 +170,14 @@ nav a {
     width: 100%;
     min-height: 200px;
     display: block;
+    color: #caccd0;
 }
 
 #promptName {
     /* New rule for promptName */
     width: 100%;
     display: block;
+    color: #caccd0;
 }
 
 .copy-code-button {
