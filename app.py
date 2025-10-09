@@ -118,6 +118,8 @@ def autocomplete():
 @app.route('/')
 def index():
     page = request.args.get('page', 1, type=int)
+    user = get_current_user()
+    user_id = user['id'] if user else None
     
     db = get_db()
     cursor = db.cursor()
@@ -172,12 +174,25 @@ def index():
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
 
+    order_clauses = []
+
+    if user_id:
+        order_clauses.append(
+            "CASE "
+            "WHEN EXISTS (SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = k.id AND action_type = 'complete') THEN 2 "
+            "WHEN EXISTS (SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = k.id AND action_type = 'save') THEN 1 "
+            "ELSE 0 END ASC"
+        )
+        params.extend([user_id, user_id])
+
     if sort_by == 'upvotes':
-        query += " ORDER BY k.upvotes DESC"
+        order_clauses.append("k.upvotes DESC")
     elif sort_by == 'saves':
-        query += " ORDER BY k.saves DESC"
+        order_clauses.append("k.saves DESC")
     else:
-        query += " ORDER BY k.created_at DESC"
+        order_clauses.append("k.created_at DESC")
+
+    query += " ORDER BY " + ", ".join(order_clauses)
     
     # Get total count for pagination
     count_query = query.replace("SELECT k.*, u.display_name as author_display_name", "SELECT COUNT(k.id)")
@@ -194,8 +209,6 @@ def index():
     katas_data = cursor.fetchall()
 
     paginated_katas = []
-    user = get_current_user()
-    user_id = user['id'] if user else None
 
     for kata_row in katas_data:
         kata_dict = dict(kata_row)
