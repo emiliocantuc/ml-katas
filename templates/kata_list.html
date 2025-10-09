@@ -20,7 +20,7 @@
                 </div>
                 <p>{{ (kata.content | striptags | truncate(200)) if kata.content else '' }}</p>
                 
-                <div>
+                <div class="kata-actions">
                     <span id="upvote-button-{{ kata.id }}"
                           hx-post="{{ url_for('upvote_kata', kata_id=kata.id) }}"
                           hx-target="this"

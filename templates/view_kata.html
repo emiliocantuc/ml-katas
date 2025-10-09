@@ -19,7 +19,7 @@
         <hr>
         <div id="kata-content" data-markdown="{{ kata.content }}">{{ kata.html_content | safe }}</div>
         <hr>
-        <div>
+        <div class="kata-actions">
             <span id="upvote-button-{{ kata.id }}"
                   hx-post="{{ url_for('upvote_kata', kata_id=kata.id) }}"
                   hx-target="this"
