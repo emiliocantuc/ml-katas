@@ -58,6 +58,10 @@
             </span>
             {% endif %}
         </div>
+        {% if user %}
+            {% set note = kata.user_note %}
+            {% include 'partials/kata_note.html' %}
+        {% endif %}
     </article>
 
     <script>

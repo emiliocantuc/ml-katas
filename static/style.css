@@ -90,6 +90,58 @@ nav a {
     display: inline-flex;
 }
 
+.kata-note {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #2a2d2f;
+    display: grid;
+    gap: 14px;
+}
+
+.kata-note__feedback {
+    font-size: 0.85em;
+    padding: 8px 10px;
+    border-left: 3px solid #2a2d2f;
+    background-color: #202325;
+}
+
+.kata-note__feedback--success {
+    border-color: #2f8f6b;
+}
+
+.kata-note__feedback--error {
+    border-color: #b14a4a;
+}
+
+.kata-note__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.kata-note__meta {
+    font-size: 0.8em;
+    color: #a5aaae;
+}
+
+.kata-note__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kata-note textarea {
+    min-height: 80px;
+    padding: 10px;
+    line-height: 1.4;
+    max-width: 100%;
+    min-width: 200px;
+    color: #a5aaae;
+}
+
 .pagination {
     margin-top: 20px;
     display: flex;

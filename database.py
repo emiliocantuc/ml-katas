@@ -60,6 +60,18 @@ def init_db():
                 FOREIGN KEY (kata_id) REFERENCES katas (id)
             )
         ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_kata_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                kata_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                UNIQUE(user_id, kata_id),
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (kata_id) REFERENCES katas (id)
+            )
+        ''')
         
         # Create prompts table
         cursor.execute('''

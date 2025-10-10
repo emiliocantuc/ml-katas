@@ -1,0 +1,33 @@
+<section id="kata-note-section" class="kata-note" hx-target="this" hx-swap="outerHTML">
+    {% if feedback and feedback_type == 'error' %}
+    <div class="kata-note__feedback kata-note__feedback--{{ feedback_type|default('success') }}">
+        {{ feedback }}
+    </div>
+    {% endif %}
+
+    <form hx-post="{{ url_for('save_kata_note', kata_id=kata.id) }}" hx-target="#kata-note-section" hx-swap="outerHTML">
+        <textarea name="note"
+                  maxlength="{{ note_max_length }}"
+                  rows="3"
+                  placeholder="Add a private note (only you can see this)"
+                  aria-label="Personal note for this kata"
+                  class="kata-note__input">{{ form_value if (form_value is defined and form_value is not none) else (note.content if note else '') }}</textarea>
+
+        <div class="kata-note__footer">
+            <div class="kata-note__actions">
+                <button type="submit">Save</button>
+                <button type="submit" name="clear" value="1" {% if not note %}disabled{% endif %}>Clear</button>
+            </div>
+
+            {% set raw_text = form_value if (form_value is defined and form_value is not none) else (note.content if note else '') %}
+            {% set current_text = raw_text if raw_text is not none else '' %}
+            {% set current_length = current_text|length %}
+            <span class="kata-note__meta">
+                {{ current_length }}/{{ note_max_length }} chars
+                {% if status_message %}
+                    · {{ status_message }}
+                {% endif %}
+            </span>
+        </div>
+    </form>
+</section>

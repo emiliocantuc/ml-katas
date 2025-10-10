@@ -8,7 +8,7 @@
 #     "markdown2",
 # ]
 # ///
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g, render_template_string
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, g, render_template_string, make_response
 import markdown2
 import uuid
 import re
@@ -21,9 +21,8 @@ from datetime import datetime, timedelta
 KATAS_PER_PAGE = 25
 ALLOWED_COMPLETION_TIMES = ['<10 mins', '<30 mins', '<1 hr', '>1 hr']
 ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard']
+MAX_NOTE_LENGTH = 200
 
-
-import os # Added import
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'supersecretkey') # Load from .env or use default
@@ -91,9 +90,26 @@ def get_kata_by_id(kata_id, user_id=None):
             kata_dict['is_saved'] = cursor.fetchone() is not None
             cursor.execute("SELECT 1 FROM user_kata_actions WHERE user_id = ? AND kata_id = ? AND action_type = 'complete'", (user_id, kata_id))
             kata_dict['is_completed'] = cursor.fetchone() is not None
+            cursor.execute("SELECT content FROM user_kata_notes WHERE user_id = ? AND kata_id = ?", (user_id, kata_id))
+            note_row = cursor.fetchone()
+            kata_dict['user_note'] = dict(note_row) if note_row else None
+        else:
+            kata_dict['user_note'] = None
 
         return kata_dict
     return None
+
+def render_kata_note_section(kata, feedback=None, feedback_type=None, form_value=None, status_message=None):
+    return render_template(
+        'partials/kata_note.html',
+        kata=kata,
+        note=kata.get('user_note'),
+        note_max_length=MAX_NOTE_LENGTH,
+        feedback=feedback,
+        feedback_type=feedback_type,
+        form_value=form_value,
+        status_message=status_message
+    )
 
 @app.route('/autocomplete')
 def autocomplete():
@@ -363,7 +379,7 @@ def view_kata(kata_id):
             kata['html_content'] = markdown2.markdown(kata['content'], extras=["fenced-code-blocks", "latex"])
         else:
             kata['html_content'] = markdown2.markdown(re.sub(r'\$\$\s*\$\$', '', kata['content']), extras=["fenced-code-blocks", "latex"])
-        return render_template('view_kata.html', kata=kata, user=user)
+        return render_template('view_kata.html', kata=kata, user=user, note_max_length=MAX_NOTE_LENGTH)
     return 'Kata not found', 404
 
 @app.route('/kata/<int:kata_id>/upvote', methods=['POST'])
@@ -483,6 +499,51 @@ def complete_kata(kata_id):
         </span>""",
         kata=updated_kata, user=user
     )
+
+
+@app.route('/kata/<int:kata_id>/note', methods=['POST'])
+def save_kata_note(kata_id):
+    user = get_current_user()
+    if not user:
+        return 'Unauthorized', 401
+
+    kata = get_kata_by_id(kata_id, user['id'])
+    if not kata:
+        return 'Kata not found', 404
+
+    note_text = request.form.get('note', '')
+    clear_requested = request.form.get('clear') == '1'
+
+    db = get_db()
+    cursor = db.cursor()
+
+    if clear_requested or not note_text.strip():
+        cursor.execute("DELETE FROM user_kata_notes WHERE user_id = ? AND kata_id = ?", (user['id'], kata_id))
+        db.commit()
+        updated_kata = get_kata_by_id(kata_id, user['id'])
+        return render_kata_note_section(updated_kata, status_message='Cleared.')
+
+    note_text = note_text.strip()
+    if len(note_text) > MAX_NOTE_LENGTH:
+        return render_kata_note_section(
+            kata,
+            feedback=f'Notes cannot be longer than {MAX_NOTE_LENGTH} characters.',
+            feedback_type='error',
+            form_value=note_text
+        )
+
+    cursor.execute(
+        """
+        INSERT INTO user_kata_notes (user_id, kata_id, content)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id, kata_id)
+        DO UPDATE SET content = excluded.content
+        """,
+        (user['id'], kata_id, note_text)
+    )
+    db.commit()
+    updated_kata = get_kata_by_id(kata_id, user['id'])
+    return render_kata_note_section(updated_kata, status_message='Saved.')
 
 
 @app.route('/kata/<int:kata_id>/delete', methods=['POST'])
