@@ -6,20 +6,21 @@
     {% endif %}
 
     <form hx-post="{{ url_for('save_kata_note', kata_id=kata.id) }}" hx-target="#kata-note-section" hx-swap="outerHTML">
+        {% set current_note = kata.user_note if kata.user_note is not none else '' %}
         <textarea name="note"
                   maxlength="{{ note_max_length }}"
                   rows="3"
                   placeholder="Add a private note (only you can see this)"
                   aria-label="Personal note for this kata"
-                  class="kata-note__input">{{ form_value if (form_value is defined and form_value is not none) else (note.content if note else '') }}</textarea>
+                  class="kata-note__input">{{ form_value if (form_value is defined and form_value is not none) else current_note }}</textarea>
 
         <div class="kata-note__footer">
             <div class="kata-note__actions">
                 <button type="submit">Save</button>
-                <button type="submit" name="clear" value="1" {% if not note %}disabled{% endif %}>Clear</button>
+                <button type="submit" name="clear" value="1" {% if not kata.user_note %}disabled{% endif %}>Clear</button>
             </div>
 
-            {% set raw_text = form_value if (form_value is defined and form_value is not none) else (note.content if note else '') %}
+            {% set raw_text = form_value if (form_value is defined and form_value is not none) else current_note %}
             {% set current_text = raw_text if raw_text is not none else '' %}
             {% set current_length = current_text|length %}
             <span class="kata-note__meta">

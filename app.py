@@ -92,7 +92,11 @@ def get_kata_by_id(kata_id, user_id=None):
             kata_dict['is_completed'] = cursor.fetchone() is not None
             cursor.execute("SELECT content FROM user_kata_notes WHERE user_id = ? AND kata_id = ?", (user_id, kata_id))
             note_row = cursor.fetchone()
-            kata_dict['user_note'] = dict(note_row) if note_row else None
+            if note_row:
+                note_value = note_row['content'] if 'content' in note_row.keys() else note_row[0]
+                kata_dict['user_note'] = note_value
+            else:
+                kata_dict['user_note'] = None
         else:
             kata_dict['user_note'] = None
 
@@ -110,6 +114,33 @@ def render_kata_note_section(kata, feedback=None, feedback_type=None, form_value
         form_value=form_value,
         status_message=status_message
     )
+
+def build_kata_export_payload(kata, include_user_state=True):
+    payload = {
+        'id': kata.get('id'),
+        'title': kata.get('title'),
+        'content': kata.get('content'),
+        'difficulty': kata.get('difficulty'),
+        'completion_time': kata.get('completion_time'),
+        'topics': kata.get('topics', []),
+        'stats': {
+            'upvotes': kata.get('upvotes'),
+            'saves': kata.get('saves'),
+            'completions': kata.get('completions'),
+        },
+        'author': kata.get('author_display_name'),
+        'created_at': kata.get('created_at'),
+    }
+
+    if include_user_state:
+        note_value = kata.get('user_note') or ''
+        payload['user_state'] = {
+            'is_upvoted': bool(kata.get('is_upvoted')),
+            'is_saved': bool(kata.get('is_saved')),
+            'is_completed': bool(kata.get('is_completed')),
+            'note': note_value,
+        }
+    return payload
 
 @app.route('/autocomplete')
 def autocomplete():
@@ -379,7 +410,8 @@ def view_kata(kata_id):
             kata['html_content'] = markdown2.markdown(kata['content'], extras=["fenced-code-blocks", "latex"])
         else:
             kata['html_content'] = markdown2.markdown(re.sub(r'\$\$\s*\$\$', '', kata['content']), extras=["fenced-code-blocks", "latex"])
-        return render_template('view_kata.html', kata=kata, user=user, note_max_length=MAX_NOTE_LENGTH)
+        kata_export = build_kata_export_payload(kata, include_user_state=bool(user))
+        return render_template('view_kata.html', kata=kata, user=user, note_max_length=MAX_NOTE_LENGTH, kata_export=kata_export)
     return 'Kata not found', 404
 
 @app.route('/kata/<int:kata_id>/upvote', methods=['POST'])
@@ -860,17 +892,18 @@ def compile_prompt():
 
     # Helper to fetch kata details for JSON output
     def fetch_kata_details(kata_id):
-        kata_cursor = db.cursor()
-        kata_cursor.execute("SELECT title, content, difficulty, completion_time FROM katas WHERE id = ?", (kata_id,))
-        kata_row = kata_cursor.fetchone()
-        if kata_row:
-            kata_dict = dict(kata_row)
-            # Fetch topics for the kata
-            kata_cursor.execute("SELECT t.name FROM topics t JOIN kata_topics kt ON t.id = kt.topic_id WHERE kt.kata_id = ?", (kata_id,))
-            topics_list = [row['name'] for row in kata_cursor.fetchall()]
-            kata_dict['topics'] = ", ".join(topics_list) # Join topics with comma and space
-            return kata_dict
+        kata_dict = get_kata_by_id(kata_id, user['id'])
+        if kata_dict:
+            return build_kata_export_payload(kata_dict, include_user_state=True)
         return None
+
+    def build_kata_list_json(kata_ids):
+        exports = []
+        for kata_id in kata_ids:
+            details = fetch_kata_details(kata_id)
+            if details:
+                exports.append(details)
+        return json.dumps(exports, indent=2)
 
     # Replace [[ your_10_last_upvoted ]]
     db = get_db()
@@ -883,7 +916,7 @@ def compile_prompt():
         LIMIT 10
     """, (user['id'],))
     upvoted_kata_ids = [row['id'] for row in cursor.fetchall()]
-    upvoted_katas_json = json.dumps([fetch_kata_details(kata_id) for kata_id in upvoted_kata_ids if fetch_kata_details(kata_id) is not None], indent=2)
+    upvoted_katas_json = build_kata_list_json(upvoted_kata_ids)
     compiled_content = compiled_content.replace('[[ your_10_last_upvoted ]]', upvoted_katas_json)
 
     # Replace [[ your_10_last_saved ]]
@@ -895,7 +928,7 @@ def compile_prompt():
         LIMIT 10
     """, (user['id'],))
     saved_kata_ids = [row['id'] for row in cursor.fetchall()]
-    saved_katas_json = json.dumps([fetch_kata_details(kata_id) for kata_id in saved_kata_ids if fetch_kata_details(kata_id) is not None], indent=2)
+    saved_katas_json = build_kata_list_json(saved_kata_ids)
     compiled_content = compiled_content.replace('[[ your_10_last_saved ]]', saved_katas_json)
 
     # Replace [[ your_last_completed ]]
@@ -907,7 +940,7 @@ def compile_prompt():
         LIMIT 10
     """, (user['id'],))
     completed_kata_ids = [row['id'] for row in cursor.fetchall()]
-    completed_katas_json = json.dumps([fetch_kata_details(kata_id) for kata_id in completed_kata_ids if fetch_kata_details(kata_id) is not None], indent=2)
+    completed_katas_json = build_kata_list_json(completed_kata_ids)
     compiled_content = compiled_content.replace('[[ your_last_completed ]]', completed_katas_json)
 
     return jsonify({'success': True, 'compiled_content': compiled_content})

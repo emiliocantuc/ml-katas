@@ -17,7 +17,7 @@
             <span class="creation-date">{{ kata.created_at | humanize_time }} </span><span>by {{ kata.author_display_name }}</span>
         </div>
         <hr>
-        <div id="kata-content" data-markdown="{{ kata.content }}">{{ kata.html_content | safe }}</div>
+        <div id="kata-content">{{ kata.html_content | safe }}</div>
         <hr>
         <div class="kata-actions">
             <span id="upvote-button-{{ kata.id }}"
@@ -48,7 +48,7 @@
                 </button>
             </span>
             <span style="display: inline-block;">
-                <button type="button" id="copy-markdown-button">Copy Markdown</button>
+                <button type="button" id="copy-json-button">Copy JSON</button>
             </span>
                         {% if user and kata.author_id == user.id %}
             <span style="display: inline-block;">
@@ -59,7 +59,6 @@
             {% endif %}
         </div>
         {% if user %}
-            {% set note = kata.user_note %}
             {% include 'partials/kata_note.html' %}
         {% endif %}
     </article>
@@ -88,13 +87,16 @@
                 wrapper.appendChild(button);
             });
 
-            document.getElementById('copy-markdown-button').addEventListener('click', (e) => {
-                const markdownContent = document.getElementById('kata-content').dataset.markdown;
-                navigator.clipboard.writeText(markdownContent).then(() => {
+            const copyJsonButton = document.getElementById('copy-json-button');
+            const kataJsonData = {{ kata_export | tojson }};
+
+            copyJsonButton.addEventListener('click', (e) => {
+                const payload = JSON.stringify(kataJsonData, null, 2);
+                navigator.clipboard.writeText(payload).then(() => {
                     e.target.innerText = 'Copied!';
-                    setTimeout(() => { e.target.innerText = 'Copy Markdown'; }, 2000);
+                    setTimeout(() => { e.target.innerText = 'Copy JSON'; }, 2000);
                 }).catch(err => {
-                    console.error('Failed to copy markdown: ', err);
+                    console.error('Failed to copy kata JSON: ', err);
                 });
             });
         });
