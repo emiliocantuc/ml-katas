@@ -382,6 +382,9 @@ def submit_kata():
     user = g.current_user
 
     if request.method == 'POST':
+        db = get_db()
+        cursor = db.cursor()
+
         title = request.form['title']
         content = request.form['content']
         topics_str = request.form['topics']
@@ -402,6 +405,9 @@ def submit_kata():
             for error in errors:
                 flash(error, 'error')
             return redirect(url_for('submit_kata'))
+
+        author_id = user['id']
+        topics_text = " ".join(topics)
 
         cursor.execute("INSERT INTO katas (title, content, author_id, difficulty, completion_time, topics_text) VALUES (?, ?, ?, ?, ?, ?)",
                        (title, content, author_id, difficulty, completion_time, topics_text))
