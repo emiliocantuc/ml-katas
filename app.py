@@ -24,9 +24,17 @@ ALLOWED_COMPLETION_TIMES = ['<10 mins', '<30 mins', '<1 hr', '>1 hr']
 ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard']
 MAX_NOTE_LENGTH = 200
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SCHEMA_DETAILS_PATH = os.path.join(BASE_DIR, 'static', 'kata_schema.txt')
+try:
+    with open(SCHEMA_DETAILS_PATH, 'r', encoding='utf-8') as schema_file:
+        SCHEMA_DETAILS_DESCRIPTION = schema_file.read().strip()
+except FileNotFoundError:
+    print("Error: 'static/kata_schema.txt' not found.")
+    exit(1)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY') # Load from .env or use default
+app.secret_key = os.environ.get('SECRET_KEY', 'supersecretkey') # Load from .env or use default
 if not app.secret_key:
     print("Error: SECRET_KEY not set.")
     exit(1)
@@ -877,13 +885,6 @@ def compile_prompt():
     # Replace [[ allowed_times ]]
     compiled_content = compiled_content.replace('[[ allowed_times ]]', ', '.join(ALLOWED_COMPLETION_TIMES))
 
-    SCHEMA_DETAILS_DESCRIPTION = """The kata upload schema expects a JSON array of objects, where each object represents a kata. Each kata object should have the following fields:
-
-- **title** (string): The title of the kata. Must be between 1 and 100 characters.
-- **content** (string): The main content of the kata, supporting Markdown (including code blocks) and latex (in between $ and $$). Must be between 1 and 10000 characters.
-- **topics** (string): A comma-separated string of topics related to the kata. You can add up to 5 topics, and each topic must be 20 characters or less.
-- **difficulty** (string): The difficulty level of the kata. Allowed values are: easy, medium, hard.
-- **completion_time** (string): The estimated completion time for the kata. Allowed values are: <10 mins, <30 mins, <1 hr, >1 hr."""
     compiled_content = compiled_content.replace('[[ schema_details ]]', SCHEMA_DETAILS_DESCRIPTION)
 
     # Helper to fetch kata details for JSON output
