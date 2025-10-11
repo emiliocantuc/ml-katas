@@ -5,8 +5,6 @@ Improve ML skills by doing exercises (or "katas"). This [site](https://mlkatas.c
 TODOs
 - export as study cards?
 - public prompts
-- fix prompt edit / easily fork a prompt
 - similar katas
 - dedup katas
-- mark as easy / medium / hard for you?
 - maybe a MCP?

@@ -54,7 +54,8 @@ Follow this schema for your output:
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="submit" class="btn btn-primary" id="savePromptButton" data-default-label="Save"
+                    data-override-label="Override">Save</button>
                 <button type="button" class="btn btn-secondary" id="clearFormButton">Clear</button>
             </form>
         </div>
@@ -68,9 +69,11 @@ Follow this schema for your output:
             {% if user_prompts %}
             <ul class="list-group">
                 {% for prompt in user_prompts %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ prompt.name }}
+                <li class="list-group-item d-flex justify-content-between align-items-center prompt-list-item"
+                    data-prompt-id="{{ prompt.id }}" data-prompt-name="{{ prompt.name|e }}">
+                    <span class="prompt-name">{{ prompt.name }}</span>
                     <a href="#" class="edit-prompt-btn ms-auto me-2" data-id="{{ prompt.id }}">Edit</a>
+                    <a href="#" class="fork-prompt-btn me-2" data-id="{{ prompt.id }}">Fork</a>
                     <a href="#" class="delete-prompt-btn me-2" data-id="{{ prompt.id }}">Delete</a>
                     <a href="#" class="compile-prompt-btn" data-id="{{ prompt.id }}">Compile</a>
                 </li>
@@ -112,6 +115,35 @@ Follow this schema for your output:
         const clearFormButton = document.getElementById('clearFormButton');
         const compiledOutput = document.getElementById('compiledOutput');
         const copyOutputButton = document.getElementById('copyOutputButton');
+        const promptStatusMessage = document.getElementById('promptStatusMessage');
+        const saveButton = document.getElementById('savePromptButton');
+        const defaultSaveLabel = saveButton ? (saveButton.dataset.defaultLabel || saveButton.textContent) : 'Save';
+        const overrideSaveLabel = saveButton ? (saveButton.dataset.overrideLabel || 'Override') : 'Override';
+
+        const existingPromptLookup = new Map();
+        document.querySelectorAll('.prompt-list-item').forEach(item => {
+            const promptName = (item.dataset.promptName || '').trim().toLowerCase();
+            if (promptName.length > 0) {
+                existingPromptLookup.set(promptName, item.dataset.promptId || '');
+            }
+        });
+
+        function setOverrideState(enabled) {
+            if (!saveButton) {
+                return;
+            }
+            if (promptStatusMessage) {
+                promptStatusMessage.classList.toggle('d-none', !enabled);
+            }
+            saveButton.textContent = enabled ? overrideSaveLabel : defaultSaveLabel;
+        }
+
+        function updateOverrideState() {
+            const currentName = promptNameInput.value.trim().toLowerCase();
+            const hasPromptId = promptIdInput.value.trim().length > 0;
+            const matchesExisting = currentName.length > 0 && existingPromptLookup.has(currentName);
+            setOverrideState(hasPromptId || matchesExisting);
+        }
 
         // Handle inserting special strings
         document.querySelectorAll('.insert-string-btn').forEach(button => {
@@ -120,6 +152,11 @@ Follow this schema for your output:
                 insertAtCursor(promptContentInput, stringToInsert);
             });
         });
+
+        if (promptNameInput) {
+            promptNameInput.addEventListener('input', updateOverrideState);
+        }
+        setOverrideState(false);
 
         // Handle Save/Update Prompt
         promptForm.addEventListener('submit', async function (event) {
@@ -149,6 +186,32 @@ Follow this schema for your output:
                     promptIdInput.value = data.prompt.id;
                     promptNameInput.value = data.prompt.name;
                     promptContentInput.value = data.prompt.content;
+                    updateOverrideState();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            });
+        });
+
+        // Handle Fork Prompt
+        document.querySelectorAll('.fork-prompt-btn').forEach(button => {
+            button.addEventListener('click', async function (event) {
+                event.preventDefault();
+                const promptId = this.dataset.id;
+                const response = await fetch(`/get_prompt/${promptId}`);
+                const data = await response.json();
+                if (data.success) {
+                    const originalName = data.prompt.name || 'Untitled Prompt';
+                    let forkName = `${originalName} (copy)`;
+                    if (originalName.trim().toLowerCase().endsWith('(copy)')) {
+                        forkName = `${originalName.trim()} 2`;
+                    }
+                    promptIdInput.value = '';
+                    promptNameInput.value = forkName;
+                    promptContentInput.value = data.prompt.content;
+                    promptNameInput.focus();
+                    promptNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    updateOverrideState();
                 } else {
                     alert('Error: ' + data.message);
                 }
@@ -213,6 +276,7 @@ Follow this schema for your output:
             promptIdInput.value = '';
             promptNameInput.value = '';
             promptContentInput.value = '';
+            setOverrideState(false);
         });
 
         // Copy to Clipboard
