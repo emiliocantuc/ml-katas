@@ -17,6 +17,7 @@ import os
 import sqlite3
 import json
 from datetime import datetime, timedelta
+from functools import wraps
 
 KATAS_PER_PAGE = 25
 ALLOWED_COMPLETION_TIMES = ['<10 mins', '<30 mins', '<1 hr', '>1 hr']
@@ -25,7 +26,10 @@ MAX_NOTE_LENGTH = 200
 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'supersecretkey') # Load from .env or use default
+app.secret_key = os.environ.get('SECRET_KEY') # Load from .env or use default
+if not app.secret_key:
+    print("Error: SECRET_KEY not set.")
+    exit(1)
 
 @app.template_filter('humanize_time')
 def humanize_time(dt):
@@ -68,6 +72,25 @@ def get_current_user():
         user = cursor.fetchone()
         return user
     return None
+
+def login_required(response_type='redirect', message=None, flash_category='error'):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped(*args, **kwargs):
+            user = get_current_user()
+            if user:
+                g.current_user = user
+                return view_func(*args, **kwargs)
+
+            if response_type == 'json':
+                return jsonify({'success': False, 'message': message or 'User not logged in.'}), 401
+            if response_type == 'plain':
+                return message or 'Unauthorized', 401
+
+            flash(message or 'Please log in to continue.', flash_category)
+            return redirect(url_for('login'))
+        return wrapped
+    return decorator
 
 # Helper function to get a kata by ID
 def get_kata_by_id(kata_id, user_id=None):
@@ -346,10 +369,9 @@ def validate_kata_data(kata_data):
     return errors
 
 @app.route('/submit', methods=['GET', 'POST'])
+@login_required(message='Please log in to submit katas.')
 def submit_kata():
-    user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
+    user = g.current_user
 
     if request.method == 'POST':
         title = request.form['title']
@@ -415,11 +437,9 @@ def view_kata(kata_id):
     return 'Kata not found', 404
 
 @app.route('/kata/<int:kata_id>/upvote', methods=['POST'])
+@login_required(message='Please log in to upvote katas.')
 def upvote_kata(kata_id):
-    user = get_current_user()
-    if not user:
-        flash('Please log in to upvote katas.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
@@ -454,11 +474,9 @@ def upvote_kata(kata_id):
 
 
 @app.route('/kata/<int:kata_id>/save', methods=['POST'])
+@login_required(message='Please log in to save katas.')
 def save_kata(kata_id):
-    user = get_current_user()
-    if not user:
-        flash('Please log in to save katas.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
@@ -494,11 +512,9 @@ def save_kata(kata_id):
 
 
 @app.route('/kata/<int:kata_id>/complete', methods=['POST'])
+@login_required(message='Please log in to mark katas as complete.')
 def complete_kata(kata_id):
-    user = get_current_user()
-    if not user:
-        flash('Please log in to mark katas as complete.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
@@ -534,10 +550,9 @@ def complete_kata(kata_id):
 
 
 @app.route('/kata/<int:kata_id>/note', methods=['POST'])
+@login_required(response_type='plain', message='Unauthorized')
 def save_kata_note(kata_id):
-    user = get_current_user()
-    if not user:
-        return 'Unauthorized', 401
+    user = g.current_user
 
     kata = get_kata_by_id(kata_id, user['id'])
     if not kata:
@@ -579,11 +594,9 @@ def save_kata_note(kata_id):
 
 
 @app.route('/kata/<int:kata_id>/delete', methods=['POST'])
+@login_required(message='Please log in to delete katas.')
 def delete_kata(kata_id):
-    user = get_current_user()
-    if not user:
-        flash('Please log in to delete katas.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
@@ -666,41 +679,33 @@ def get_katas_by_author(author_id):
     return katas_list
 
 @app.route('/saved')
+@login_required(message='Please log in to view your saved katas.')
 def saved():
-    user = get_current_user()
-    if not user:
-        flash('Please log in to view your saved katas.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     saved_katas_list = get_katas_by_action(user['id'], 'save')
     return render_template('kata_list.html', katas=saved_katas_list, user=user, page_title="Saved Katas")
 
 @app.route('/completed')
+@login_required(message='Please log in to view your completed katas.')
 def completed():
-    user = get_current_user()
-    if not user:
-        flash('Please log in to view your completed katas.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     completed_katas_list = get_katas_by_action(user['id'], 'complete')
     return render_template('kata_list.html', katas=completed_katas_list, user=user, page_title="Completed Katas")
 
 @app.route('/my_katas')
+@login_required(message='Please log in to view your katas.')
 def my_katas():
-    user = get_current_user()
-    if not user:
-        flash('Please log in to view your katas.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     my_katas_list = get_katas_by_author(user['id'])
     return render_template('kata_list.html', katas=my_katas_list, user=user, page_title="My Katas")
 
 @app.route('/bulk_upload_katas', methods=['POST'])
+@login_required(message='Please log in to bulk upload katas.')
 def bulk_upload_katas():
-    user = get_current_user()
-    if not user:
-        flash('Please log in to bulk upload katas.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
@@ -779,11 +784,9 @@ def bulk_upload_katas():
     return redirect(url_for('index'))
 
 @app.route('/prompts')
+@login_required(message='Please log in to manage your prompts.')
 def prompts():
-    user = get_current_user()
-    if not user:
-        flash('Please log in to manage your prompts.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
     
     db = get_db()
     cursor = db.cursor()
@@ -793,10 +796,9 @@ def prompts():
     return render_template('prompts.html', user=user, user_prompts=user_prompts)
 
 @app.route('/save_prompt', methods=['POST'])
+@login_required(response_type='json')
 def save_prompt():
-    user = get_current_user()
-    if not user:
-        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+    user = g.current_user
 
     prompt_id = request.form.get('prompt_id')
     prompt_name = request.form.get('prompt_name')
@@ -804,9 +806,6 @@ def save_prompt():
 
     if not prompt_name or not prompt_content:
         return jsonify({'success': False, 'message': 'Prompt name and content are required.'}), 400
-
-    db = get_db()
-    cursor = db.cursor()
 
     db = get_db()
     cursor = db.cursor()
@@ -834,10 +833,9 @@ def save_prompt():
     return jsonify({'success': True, 'prompt_id': prompt_id if prompt_id else existing_prompt_id}) # Return the ID of the updated/new prompt
 
 @app.route('/get_prompt/<int:prompt_id>', methods=['GET'])
+@login_required(response_type='json')
 def get_prompt(prompt_id):
-    user = get_current_user()
-    if not user:
-        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
@@ -850,10 +848,9 @@ def get_prompt(prompt_id):
         return jsonify({'success': False, 'message': 'Prompt not found or unauthorized.'}), 404
 
 @app.route('/delete_prompt/<int:prompt_id>', methods=['POST'])
+@login_required(response_type='json')
 def delete_prompt(prompt_id):
-    user = get_current_user()
-    if not user:
-        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
@@ -866,10 +863,9 @@ def delete_prompt(prompt_id):
         return jsonify({'success': False, 'message': 'Prompt not found or unauthorized.'}), 404
 
 @app.route('/compile_prompt', methods=['POST'])
+@login_required(response_type='json')
 def compile_prompt():
-    user = get_current_user()
-    if not user:
-        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+    user = g.current_user
 
     prompt_content = request.form.get('prompt_content')
     if not prompt_content:
@@ -946,11 +942,9 @@ def compile_prompt():
     return jsonify({'success': True, 'compiled_content': compiled_content})
 
 @app.route('/delete_account', methods=['GET'])
+@login_required(message='Please log in to delete your account.')
 def delete_account():
-    user = get_current_user()
-    if not user:
-        flash('Please log in to delete your account.', 'error')
-        return redirect(url_for('login'))
+    user = g.current_user
 
     db = get_db()
     cursor = db.cursor()
