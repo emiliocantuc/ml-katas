@@ -4,12 +4,8 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Your Prompts</h1>
-    <h2>Create</h2>
+    <h2 class="mb-4">Your Prompts</h2>
     <div class="card mb-4">
-        <!-- <div class="card-header">
-            Create/Edit
-        </div> -->
         <div class="card-body">
             <form id="promptForm">
                 <input type="hidden" id="promptId" name="prompt_id">
@@ -62,9 +58,8 @@ Follow this schema for your output:
     </div>
     <br>
     <hr>
-    <h2>Saved</h2>
-
-    <div class="card mb-4 mt-4">
+    <h3>Saved</h3>
+    <div class="card mb-4 mt-1">
         <div class="card-body">
             {% if user_prompts %}
             <ul class="list-group">
