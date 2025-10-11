@@ -1,0 +1,25 @@
+name: Site Uptime Check
+
+on:
+  schedule:
+    - cron: "4 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check site availability
+        env:
+          SITE_URL: https://mlkatas.com
+          NTFY_CHANNEL: ${{ secrets.NTFY_CHANNEL }}
+        run: |
+          set -euo pipefail
+          if ! curl -fsS "$SITE_URL" >/dev/null 2>&1; then
+            curl -fsS -X POST \
+              -H "Title: ml-katas uptime alert" \
+              -H "Tags: warning" \
+              -d "Failed to reach $SITE_URL at $(date -u +"%Y-%m-%dT%H:%M:%SZ")." \
+              "$NTFY_CHANNEL"
+            exit 1
+          fi
